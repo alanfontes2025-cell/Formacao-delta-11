@@ -52,7 +52,23 @@ npm run lint 2>&1 || echo "LINT FAILED"
 npm run build 2>&1 || echo "BUILD FAILED"
 ```
 
-#### 2. Testes
+#### 2. Testes de Contrato (Contract-First Protocol)
+
+```bash
+# Verificar se pasta de testes de contrato existe
+if [ -d "tests/contracts" ]; then
+  # Rodar testes de contrato
+  npm run test:contracts 2>&1 || echo "CONTRACT TESTS FAILED"
+else
+  echo "CONTRACT TESTS WARNING: pasta tests/contracts/ nao encontrada"
+  echo "Se o projeto usa Contract-First Protocol, dispare o contract-tester antes de continuar"
+fi
+```
+
+**REGRA:** Se `tests/contracts/` existe e os testes FALHAM → **BLOCKER** (nao pode marcar tarefa como concluida).
+Se `tests/contracts/` nao existe → **WARNING** (reportar, mas nao bloquear — pode ser projeto legado ou sem Contract-First).
+
+#### 3. Testes Unitarios e de Integracao
 
 ```bash
 # Testes unitarios (se o script existir no package.json)
@@ -288,7 +304,8 @@ Retorne o relatorio EXATAMENTE neste formato:
 - [ ] Sintaxe JS/TS: [PASS | FAIL | N/A]
 - [ ] JSON Valido: [PASS | FAIL | N/A]
 - [ ] Build: [PASS | FAIL | N/A]
-- [ ] Testes: [PASS | FAIL | N/A]
+- [ ] Testes de Contrato (tests/contracts/): [PASS | FAIL | WARNING: nao encontrado | N/A]
+- [ ] Testes Unitarios: [PASS | FAIL | N/A]
 - [ ] Lint: [PASS | FAIL | N/A]
 - [ ] Refs Internas (imports, URLs): [PASS | FAIL | N/A]
 - [ ] Message Passing: [PASS | FAIL | N/A]

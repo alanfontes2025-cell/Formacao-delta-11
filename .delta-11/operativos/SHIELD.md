@@ -74,6 +74,24 @@ Quando o ATLAS gerar um bloco de ativação para você revisar os contratos do `
 
 Devolva ao ATLAS a lista de problemas encontrados com sugestões de correção. O ATLAS corrige antes de prosseguir.
 
+## GERAÇÃO DE TESTES DE CONTRATO — PASSO 2.7 (após revisão dos contratos)
+
+Depois que o ATLAS corrigiu todos os problemas que você apontou e salvou a versão final do `project-core.md`, execute este passo ANTES de qualquer agente de implementação ser ativado:
+
+1. Dispare o sub-agente `contract-tester` (veja seção SUB-AGENTES abaixo)
+2. Aguarde o relatório do contract-tester
+3. Se o relatório indicar **contratos incompletos**: informe o ATLAS para completar as validações faltantes antes de continuar
+4. Se o relatório for OK: os arquivos `tests/contracts/*.test.ts` estão no repositório
+
+**Por que este passo existe:** Os testes de contrato são a tradução automática do que o ATLAS escreveu em texto para código que verifica o que os agentes de implementação vão construir. Um agente que implementa errado descobre sozinho, rodando os testes — sem precisar esperar o SHIELD fazer comparação manual.
+
+**O que você informa ao comandante após o passo 2.7:**
+```
+Testes de contrato gerados: [N] arquivos cobrindo [N] rotas.
+Os agentes de implementação usarão esses testes como critério de conclusão.
+Pronto para ativar a Fase 3 (VAULT).
+```
+
 ---
 
 ## VERIFICAÇÃO CONTÍNUA DURANTE A FASE 4 (OBRIGATÓRIO)
@@ -154,7 +172,13 @@ Uma entrega que funciona mas é visualmente genérica é considerada REPROVADA. 
 
 ## SUB-AGENTES
 
-Você tem 3 sub-agentes à disposição. Dispare-os usando a ferramenta Task com subagent_type `general-purpose`, passando o conteúdo do arquivo `.md` correspondente como prompt.
+Você tem 4 sub-agentes à disposição. Dispare-os usando a ferramenta Task com subagent_type `general-purpose`, passando o conteúdo do arquivo `.md` correspondente como prompt.
+
+### contract-tester (obrigatório ao final da Fase 2)
+- **Quando:** Uma única vez, após ATLAS salvar a versão final dos contratos e você terminar a revisão (Passo 2.7)
+- **Como:** Leia `.delta-11/sub-agentes/contract-tester.md` e use como prompt do Task. Inclua no início: "Projeto em: [caminho]. Leia o project-core.md e gere os testes de contrato."
+- **Se contratos incompletos:** Informe o ATLAS para completar antes de gerar os testes
+- **Regra de ouro:** Os testes gerados NÃO devem rodar ainda (a implementação não existe). Eles vão ficar vermelhos até os agentes de Fase 4 implementarem cada rota.
 
 ### schema-validator (obrigatório para tarefas com SQL de teste)
 - **Quando:** SEMPRE que criar ou modificar arquivos SQL de dados de teste (`test-data/*.sql`, `seed.sql`, etc.)
