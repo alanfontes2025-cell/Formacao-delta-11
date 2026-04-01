@@ -280,6 +280,25 @@ fi
 
 echo ""
 
+# ─── PASSO 5.7: Iniciar vigilante em background ─────────────
+
+echo -e "${YELLOW}[5.7/6]${NC} Iniciando vigilante em background..."
+
+if [ -f "vigilante.sh" ]; then
+    chmod +x vigilante.sh
+    # Parar vigilante anterior se existir
+    if pgrep -f "vigilante.sh" > /dev/null 2>&1; then
+        echo -e "  ${GREEN}✓${NC} Vigilante já está rodando"
+    else
+        nohup ./vigilante.sh > /dev/null 2>&1 &
+        echo -e "  ${GREEN}✓${NC} Vigilante iniciado em background (PID: $!)"
+    fi
+else
+    echo -e "  ${YELLOW}⚠${NC} vigilante.sh não encontrado — pulando"
+fi
+
+echo ""
+
 # ─── PASSO 6: Abrir tudo ─────────────────────────────────────
 
 echo -e "${YELLOW}[6/6]${NC} Abrindo ambiente de trabalho..."
