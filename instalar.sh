@@ -204,6 +204,23 @@ fi
 
 echo ""
 
+# ─── PASSO 4.7: Instalar skill fluxo-ux-completo ─────────────
+
+echo -e "${YELLOW}[4.7/6]${NC} Instalando skill fluxo-ux-completo..."
+
+SKILL_DEST="$HOME/.claude/skills/fluxo-ux-completo"
+SKILL_SRC="$(pwd)/skills/fluxo-ux-completo"
+
+if [ -d "$SKILL_SRC" ]; then
+    mkdir -p "$SKILL_DEST"
+    cp -r "$SKILL_SRC/." "$SKILL_DEST/"
+    echo -e "  ${GREEN}✓${NC} Skill fluxo-ux-completo instalada em ~/.claude/skills/"
+else
+    echo -e "  ${YELLOW}⚠${NC} Pasta skills/fluxo-ux-completo não encontrada — pulando"
+fi
+
+echo ""
+
 # ─── PASSO 5: Commit e Push ──────────────────────────────────
 
 echo -e "${YELLOW}[5/6]${NC} Fazendo commit e push..."
