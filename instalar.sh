@@ -280,21 +280,50 @@ fi
 
 echo ""
 
-# ─── PASSO 5.7: Iniciar vigilante em background ─────────────
+# ─── PASSO 5.7: Instalar hooks e monitor invisível ─────────────
 
-echo -e "${YELLOW}[5.7/6]${NC} Iniciando vigilante em background..."
+echo -e "${YELLOW}[5.7/6]${NC} Configurando monitoramento de agentes..."
 
-if [ -f "vigilante.sh" ]; then
-    chmod +x vigilante.sh
-    # Parar vigilante anterior se existir
-    if pgrep -f "vigilante.sh" > /dev/null 2>&1; then
-        echo -e "  ${GREEN}✓${NC} Vigilante já está rodando"
+# 5.7a: Configurar hooks do projeto (heartbeat, stop, pre-compact)
+if [ -f ".delta-11/templates/settings-hooks.json" ]; then
+    PROJETO_SETTINGS=".claude/settings.json"
+    mkdir -p .claude
+    if [ -f "$PROJETO_SETTINGS" ]; then
+        echo -e "  ${GREEN}✓${NC} Hooks do projeto já configurados"
     else
-        nohup ./vigilante.sh > /dev/null 2>&1 &
-        echo -e "  ${GREEN}✓${NC} Vigilante iniciado em background (PID: $!)"
+        cp .delta-11/templates/settings-hooks.json "$PROJETO_SETTINGS"
+        echo -e "  ${GREEN}✓${NC} Hooks instalados (heartbeat, stop, pre-compact)"
     fi
 else
-    echo -e "  ${YELLOW}⚠${NC} vigilante.sh não encontrado — pulando"
+    echo -e "  ${YELLOW}⚠${NC} Template de hooks não encontrado — pulando"
+fi
+
+# 5.7b: Tornar hooks executáveis
+for hook in .delta-11/hooks/*.sh; do
+    [ -f "$hook" ] && chmod +x "$hook"
+done
+
+# 5.7c: Instalar LaunchAgent (monitor invisível que substitui vigilante.sh)
+PLIST_SRC="$(cd "$(dirname "$0")" && pwd)/com.delta11.monitor.plist"
+PLIST_DST="$HOME/Library/LaunchAgents/com.delta11.monitor.plist"
+
+if [ -f "$PLIST_SRC" ]; then
+    if [ -f "$PLIST_DST" ]; then
+        echo -e "  ${GREEN}✓${NC} Monitor LaunchAgent já instalado"
+    else
+        mkdir -p "$HOME/Library/LaunchAgents"
+        cp "$PLIST_SRC" "$PLIST_DST"
+        launchctl load "$PLIST_DST" 2>/dev/null
+        echo -e "  ${GREEN}✓${NC} Monitor instalado (verifica a cada 5 min, invisível)"
+    fi
+else
+    echo -e "  ${YELLOW}⚠${NC} LaunchAgent plist não encontrado — pulando"
+fi
+
+# 5.7d: Parar vigilante.sh antigo se estiver rodando
+if pgrep -f "vigilante.sh" > /dev/null 2>&1; then
+    pkill -f "vigilante.sh" 2>/dev/null
+    echo -e "  ${GREEN}✓${NC} Vigilante antigo parado (substituído pelo monitor)"
 fi
 
 echo ""

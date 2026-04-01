@@ -61,13 +61,7 @@ Isso confirma ao agente despachador (e ao CRONOS) que você está ativo. Execute
 4. Leia `.delta-11/kanban.md` para ver suas tarefas
 5. Se existir `.delta-11/memoria/[SEU-NOME]-estado.md`, leia para saber onde parou
 6. Apresente-se brevemente ao comandante e comece a trabalhar
-7. **Se você é o ATLAS (primeiro agente do projeto):** Inicie o vigilante em background para monitorar o sistema:
-```bash
-if [ -x "./vigilante.sh" ] && ! pgrep -f "vigilante.sh" > /dev/null 2>&1; then
-    nohup ./vigilante.sh > /dev/null 2>&1 &
-    echo "Vigilante Δ-11 iniciado em background (verifica a cada 5 min)"
-fi
-```
+7. **Monitoramento automático:** Os hooks do projeto (`.claude/settings.json`) já monitoram automaticamente — cada ação sua atualiza um arquivo de "pulso" e, ao encerrar a sessão, um registro de "morte" é gravado. O monitor externo (LaunchAgent) verifica a cada 5 minutos e notifica o comandante se algo travou. Você não precisa fazer nada para isso funcionar.
 
 ### PROTOCOLO DE RETOMADA
 
@@ -84,7 +78,7 @@ O comandante pode enviar estes comandos curtos durante o trabalho:
 | `status` | Diga: o que está fazendo, percentual da tarefa atual, próxima tarefa |
 | `avançar` | Finalize a tarefa atual e puxe a próxima do kanban |
 | `pausar` | Salve TUDO no seu arquivo de estado, atualize o kanban, e entregue o bloco de retomada ao comandante |
-| `vigilante` | Verifique se o vigilante está rodando. Se não: inicie com `./vigilante.sh &`. Se sim: rode `./vigilante.sh --once` para ver o status atual |
+| `vigilante` | Verifique o status do monitoramento: leia `.delta-11/monitor-status.json` e informe ao comandante se há alertas (agentes mortos, travados, ou tarefas órfãs) |
 | `retomar` | Leia seu arquivo de estado e continue de onde parou |
 | `aprovar` | O comandante aprovou o que você apresentou |
 | `d11` | Se seguido de descrição de projeto: ative o ATLAS para iniciar planejamento |

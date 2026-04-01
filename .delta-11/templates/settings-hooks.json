@@ -1,0 +1,57 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .delta-11/hooks/heartbeat.sh",
+            "timeout": 2000
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .delta-11/hooks/check-lock.js",
+            "timeout": 3000
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .delta-11/hooks/pre-compact.sh",
+            "timeout": 3000
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .delta-11/hooks/on-stop.sh",
+            "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "node .delta-11/hooks/release-locks.js",
+            "timeout": 3000
+          }
+        ]
+      }
+    ]
+  }
+}
