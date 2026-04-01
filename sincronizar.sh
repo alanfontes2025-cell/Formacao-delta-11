@@ -187,13 +187,16 @@ for f in "$SOURCE/.delta-11/templates/"*.md; do
     [ -f "$f" ] && SYNC_FILES+=(".delta-11/templates/$(basename "$f")")
 done
 
-# Painel + imagem de fundo
+# Painel + imagem de fundo + sprites dos agentes
 if [ -f "$SOURCE/.delta-11/painel.html" ]; then
     SYNC_FILES+=(".delta-11/painel.html")
 fi
 if [ -f "$SOURCE/.delta-11/bg-delta11.png" ]; then
     SYNC_FILES+=(".delta-11/bg-delta11.png")
 fi
+for f in "$SOURCE/.delta-11/sprites/"*.png; do
+    [ -f "$f" ] && SYNC_FILES+=(".delta-11/sprites/$(basename "$f")")
+done
 
 # Hooks (scripts de rastreamento em tempo real — .js e .sh)
 for f in "$SOURCE/.delta-11/hooks/"*.js "$SOURCE/.delta-11/hooks/"*.sh; do
