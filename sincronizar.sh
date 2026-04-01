@@ -187,20 +187,22 @@ for f in "$SOURCE/.delta-11/templates/"*.md; do
     [ -f "$f" ] && SYNC_FILES+=(".delta-11/templates/$(basename "$f")")
 done
 
-# Painel
+# Painel + imagem de fundo
 if [ -f "$SOURCE/.delta-11/painel.html" ]; then
     SYNC_FILES+=(".delta-11/painel.html")
 fi
+if [ -f "$SOURCE/.delta-11/bg-delta11.png" ]; then
+    SYNC_FILES+=(".delta-11/bg-delta11.png")
+fi
 
-# Hooks (scripts de rastreamento em tempo real)
-for f in "$SOURCE/.delta-11/hooks/"*.js; do
+# Hooks (scripts de rastreamento em tempo real — .js e .sh)
+for f in "$SOURCE/.delta-11/hooks/"*.js "$SOURCE/.delta-11/hooks/"*.sh; do
     [ -f "$f" ] && SYNC_FILES+=(".delta-11/hooks/$(basename "$f")")
 done
 
-# .claude/settings.json (hooks do projeto)
-if [ -f "$SOURCE/.claude/settings.json" ]; then
-    SYNC_FILES+=(".claude/settings.json")
-fi
+# .claude/settings.json — tratado separadamente na função sincronizar_projeto
+# Fonte: template de hooks em .delta-11/templates/settings-hooks.json
+SETTINGS_HOOKS_SOURCE="$SOURCE/.delta-11/templates/settings-hooks.json"
 
 # Scripts do sistema (task-done.sh e outros .sh na raiz)
 for f in "$SOURCE"/*.sh; do
@@ -211,7 +213,39 @@ for f in "$SOURCE"/*.sh; do
     [ -f "$f" ] && SYNC_FILES+=("$script_name")
 done
 
+# Skills globais (vão para ~/.claude/skills/, não para dentro dos projetos)
+SKILLS_UPDATED=0
+for skill_dir in "$SOURCE"/skills/*/; do
+    [ -d "$skill_dir" ] || continue
+    skill_name=$(basename "$skill_dir")
+    skill_dest="$HOME/.claude/skills/$skill_name"
+    if [ -d "$skill_dest" ]; then
+        # Comparar se houve mudança
+        if ! diff -rq "$skill_dir" "$skill_dest" &> /dev/null 2>&1; then
+            if [ "$DO_DRY" = true ]; then
+                echo -e "  ${YELLOW}[DRY]${NC} Atualizaria skill: $skill_name"
+            else
+                mkdir -p "$skill_dest"
+                cp -r "$skill_dir/." "$skill_dest/"
+                SKILLS_UPDATED=$((SKILLS_UPDATED + 1))
+            fi
+        fi
+    else
+        # Skill nova — instalar
+        if [ "$DO_DRY" = true ]; then
+            echo -e "  ${YELLOW}[DRY]${NC} Instalaria skill: $skill_name"
+        else
+            mkdir -p "$skill_dest"
+            cp -r "$skill_dir/." "$skill_dest/"
+            SKILLS_UPDATED=$((SKILLS_UPDATED + 1))
+        fi
+    fi
+done
+
 echo -e "  ${BOLD}Arquivos de sistema:${NC} ${#SYNC_FILES[@]}"
+if [ "$SKILLS_UPDATED" -gt 0 ]; then
+    echo -e "  ${BOLD}Skills atualizadas:${NC} ${SKILLS_UPDATED}"
+fi
 echo ""
 
 # ─── Modo diff ─────────────────────────────────────────────────
@@ -295,36 +329,8 @@ sincronizar_destino() {
             continue
         fi
 
-        # Tratamento especial para .claude/settings.json (merge, não sobrescrever)
-        if [ "$rel_path" = ".claude/settings.json" ] && [ -f "$dst" ]; then
-            if [ "$DRY_RUN" = true ]; then
-                echo -e "    ${YELLOW}~ settings.json${NC} (merge de hooks)"
-            else
-                # Merge: combinar hooks do D-11 com hooks existentes do projeto
-                local merged
-                merged=$(jq -s '
-                  .[0] as $existing |
-                  .[1] as $d11 |
-                  $existing * {
-                    hooks: (
-                      ($existing.hooks // {}) as $eh |
-                      ($d11.hooks // {}) as $dh |
-                      ($eh | keys) + ($dh | keys) | unique | map(
-                        . as $key |
-                        (($eh[$key] // []) + ($dh[$key] // [])) | unique_by(.hooks[0].command) |
-                        {($key): .}
-                      ) | add // {}
-                    )
-                  }
-                ' "$dst" "$src" 2>/dev/null)
-                if [ $? -eq 0 ] && [ -n "$merged" ]; then
-                    echo "$merged" > "$dst"
-                else
-                    # Se merge falhar, copiar direto
-                    cp "$src" "$dst"
-                fi
-            fi
-            copiados=$((copiados + 1))
+        # Pular .claude/settings.json no loop — tratado separadamente abaixo
+        if [ "$rel_path" = ".claude/settings.json" ]; then
             continue
         fi
 
@@ -340,6 +346,50 @@ sincronizar_destino() {
         fi
         copiados=$((copiados + 1))
     done
+
+    # Sincronizar .claude/settings.json separadamente (merge de hooks)
+    if [ -n "$SETTINGS_HOOKS_SOURCE" ] && [ -f "$SETTINGS_HOOKS_SOURCE" ]; then
+        local settings_dst="$destino/.claude/settings.json"
+        if [ -f "$settings_dst" ]; then
+            # Merge: combinar hooks do D-11 com hooks existentes do projeto
+            if [ "$DRY_RUN" = true ]; then
+                echo -e "    ${YELLOW}~ settings.json${NC} (merge de hooks)"
+            else
+                local merged
+                merged=$(jq -s '
+                  .[0] as $existing |
+                  .[1] as $d11 |
+                  $existing * {
+                    hooks: (
+                      ($existing.hooks // {}) as $eh |
+                      ($d11.hooks // {}) as $dh |
+                      ($eh | keys) + ($dh | keys) | unique | map(
+                        . as $key |
+                        (($eh[$key] // []) + ($dh[$key] // [])) | unique_by(.hooks[0].command) |
+                        {($key): .}
+                      ) | add // {}
+                    )
+                  }
+                ' "$settings_dst" "$SETTINGS_HOOKS_SOURCE" 2>/dev/null)
+                if [ $? -eq 0 ] && [ -n "$merged" ]; then
+                    echo "$merged" > "$settings_dst"
+                    echo -e "    ${YELLOW}~ settings.json${NC} (hooks atualizados via merge)"
+                else
+                    cp "$SETTINGS_HOOKS_SOURCE" "$settings_dst"
+                    echo -e "    ${YELLOW}~ settings.json${NC} (merge falhou, copiado template)"
+                fi
+            fi
+            copiados=$((copiados + 1))
+        else
+            # Projeto não tem settings.json — copiar template
+            if [ "$DRY_RUN" = true ]; then
+                echo -e "    ${GREEN}+ settings.json${NC} (novo, do template)"
+            else
+                cp "$SETTINGS_HOOKS_SOURCE" "$settings_dst"
+            fi
+            copiados=$((copiados + 1))
+        fi
+    fi
 
     if [ $copiados -eq 0 ]; then
         echo -e "    ${GREEN}OK Ja estava atualizado${NC}"

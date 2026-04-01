@@ -61,6 +61,7 @@ Isso confirma ao agente despachador (e ao CRONOS) que você está ativo. Execute
 4. Leia `.delta-11/kanban.md` para ver suas tarefas
 5. Se existir `.delta-11/memoria/[SEU-NOME]-estado.md`, leia para saber onde parou
 6. Apresente-se brevemente ao comandante e comece a trabalhar
+7. **Monitoramento automático:** Os hooks do projeto (`.claude/settings.json`) já monitoram automaticamente — cada ação sua atualiza um arquivo de "pulso" e, ao encerrar a sessão, um registro de "morte" é gravado. O monitor externo (LaunchAgent) verifica a cada 5 minutos e notifica o comandante se algo travou. Você não precisa fazer nada para isso funcionar.
 
 ### PROTOCOLO DE RETOMADA
 
@@ -77,6 +78,7 @@ O comandante pode enviar estes comandos curtos durante o trabalho:
 | `status` | Diga: o que está fazendo, percentual da tarefa atual, próxima tarefa |
 | `avançar` | Finalize a tarefa atual e puxe a próxima do kanban |
 | `pausar` | Salve TUDO no seu arquivo de estado, atualize o kanban, e entregue o bloco de retomada ao comandante |
+| `vigilante` | Verifique o status do monitoramento: leia `.delta-11/monitor-status.json` e informe ao comandante se há alertas (agentes mortos, travados, ou tarefas órfãs) |
 | `retomar` | Leia seu arquivo de estado e continue de onde parou |
 | `aprovar` | O comandante aprovou o que você apresentou |
 | `d11` | Se seguido de descrição de projeto: ative o ATLAS para iniciar planejamento |
@@ -386,25 +388,26 @@ O sistema suporta 3 modos de dispatch. O modo é detectado automaticamente e sal
 | **terminal-app** | CLI `claude` no Terminal (alternativa) | Abre aba no Terminal.app, roda `claude`, cola prompt |
 | **manual** | Nada detectado / fallback | Salva arquivo, pede ao comandante para colar |
 
-**DETECÇÃO AUTOMÁTICA:** O sistema detecta de onde está rodando verificando variáveis de ambiente. Se `VSCODE_PID` existe no ambiente, o Claude Code está rodando como extensão do VS Code → usa `vscode-tab`. Se não existe mas o CLI `claude` está disponível → usa `terminal-app`. A presença do CLI no PATH NÃO significa que o comandante está usando o terminal — pode ter o CLI instalado e estar usando a extensão VS Code.
+**DETECÇÃO AUTOMÁTICA:** `$VSCODE_PID` tem prioridade absoluta — é a realidade do ambiente atual e sobrescreve qualquer valor gravado em disco. Se `VSCODE_PID` existe, o Claude Code está rodando como extensão do VS Code → `vscode-tab` (e o arquivo é corrigido se estiver errado). A presença do CLI no PATH NÃO significa que o comandante está usando o terminal.
 
 Antes do primeiro auto-dispatch da sessão, detecte o modo:
 
 ```bash
-if [ -f .delta-11/.dispatch-mode ]; then
+# $VSCODE_PID é realidade — tem prioridade sobre o arquivo em disco
+if [ -n "$VSCODE_PID" ]; then
+    # Rodando dentro do VS Code (extensão) → vscode-tab, corrige o arquivo se estava errado
+    DISPATCH_MODE="vscode-tab"
+    echo "vscode-tab" > .delta-11/.dispatch-mode
+elif [ -f .delta-11/.dispatch-mode ]; then
+    # $VSCODE_PID ausente — confiar no arquivo gravado manualmente
     DISPATCH_MODE=$(cat .delta-11/.dispatch-mode | tr -d '[:space:]')
+elif command -v claude &>/dev/null; then
+    # CLI disponível e NÃO está no VS Code → terminal-app
+    DISPATCH_MODE="terminal-app"
+    echo "terminal-app" > .delta-11/.dispatch-mode
 else
-    # Detectar de onde o Claude Code está rodando
-    if [ -n "$VSCODE_PID" ]; then
-        # Rodando dentro do VS Code (extensão) → vscode-tab
-        DISPATCH_MODE="vscode-tab"
-    elif command -v claude &>/dev/null; then
-        # CLI disponível e NÃO está no VS Code → terminal-app
-        DISPATCH_MODE="terminal-app"
-    else
-        DISPATCH_MODE="manual"
-    fi
-    echo "$DISPATCH_MODE" > .delta-11/.dispatch-mode
+    DISPATCH_MODE="manual"
+    echo "manual" > .delta-11/.dispatch-mode
 fi
 ```
 
@@ -466,11 +469,12 @@ cat .delta-11/ativacoes/[ARQUIVO].txt | pbcopy
 # 2. Aguardar o comandante ler o aviso
 sleep 5
 
-# 3. Ler modo de dispatch (detectar automaticamente se não existe arquivo)
-if [ -f .delta-11/.dispatch-mode ]; then
-    DISPATCH_MODE=$(cat .delta-11/.dispatch-mode | tr -d '[:space:]')
-elif [ -n "$VSCODE_PID" ]; then
+# 3. Ler modo de dispatch ($VSCODE_PID tem prioridade sobre o arquivo)
+if [ -n "$VSCODE_PID" ]; then
     DISPATCH_MODE="vscode-tab"
+    echo "vscode-tab" > .delta-11/.dispatch-mode  # corrige o arquivo se estava errado
+elif [ -f .delta-11/.dispatch-mode ]; then
+    DISPATCH_MODE=$(cat .delta-11/.dispatch-mode | tr -d '[:space:]')
 else
     DISPATCH_MODE="terminal-app"
 fi
@@ -1016,3 +1020,4 @@ Toda vez que um agente errar de forma recorrente, adicionar aqui para prevenir r
 - [2026-03-09] [D-11 Auto-dispatch detecção errada] → Detecção automática verificava `command -v claude` e, se CLI existisse no PATH, assumia `terminal-app` como padrão. Comandante usa extensão VS Code, não CLI no terminal. Resultado: todo projeto novo recebia `terminal-app` mesmo rodando dentro do VS Code. → Correção: **Detecção agora verifica `$VSCODE_PID` primeiro.** Se a variável existe, o Claude Code está rodando como extensão do VS Code → `vscode-tab`. Só usa `terminal-app` se NÃO está no VS Code E o CLI existe. `vscode-tab` é agora o padrão recomendado, não `terminal-app`. Ter o CLI instalado NÃO significa que o comandante está usando o terminal.
 - [2026-03-09] [D-11 AppleScript nome de processo hardcoded] → AppleScript usava `process "Code"` e `application "Visual Studio Code"` hardcoded. No Mac do comandante o app se chama "Visual Studio Code 2" (instalado no Desktop, não em /Applications) e o processo roda como "Electron", não "Code". Resultado: AppleScript falhava com erro `-1728`. → Correção: **Detecção dinâmica do nome do processo e do app.** Script detecta: (1) nome do processo via `osascript` — se "Code" não existe, usa "Electron"; (2) nome do app via `ls ~/Desktop/ /Applications/` — encontra "Visual Studio Code 2" ou "Visual Studio Code". Variáveis `$VSCODE_PROCESS` e `$VSCODE_APP` são passadas para o AppleScript via `set vsCodeProcess to` / `set vsCodeApp to`.
 - [2026-03-31] [D-11 Contract-First Protocol] → SHIELD comparava contratos e código manualmente na Fase 4, gerando ciclos ENGINE→SHIELD→ENGINE quando implementação desviava do contrato. Sem testes automáticos, erros só apareciam depois de muito trabalho pronto. → Adicionado: **Contract-First Protocol** com novo sub-agente `contract-tester` (`.delta-11/sub-agentes/contract-tester.md`). SHIELD executa Passo 2.7 ao final da Fase 2: converte contratos do `project-core.md` em arquivos de teste executáveis em `tests/contracts/`. Build Validator passa a incluir testes de contrato como BLOCKER se existirem e falharem. Critério de conclusão de tarefa na Fase 4 passa a incluir verificação automática de contrato antes da revisão manual do SHIELD.
+- [2026-03-31] [D-11 .dispatch-mode gravado errado na instalação] → Arquivo `.dispatch-mode` era gravado como `terminal-app` durante instalação quando o CLI `claude` estava no PATH. Quando o agente ativava mais tarde dentro do VS Code, verificava o arquivo primeiro — e usava `terminal-app` mesmo com `$VSCODE_PID` ativo. Resultado: agente pedia ao comandante para colar prompt manualmente em vez de fazer auto-dispatch. → Correção: **`$VSCODE_PID` passa a ter prioridade absoluta sobre o arquivo em disco.** Lógica nova: se `$VSCODE_PID` existe → sempre `vscode-tab` E sobrescreve o arquivo. Só usa o arquivo se `$VSCODE_PID` está ausente. Isso garante que um arquivo gravado errado na instalação seja corrigido automaticamente na primeira sessão dentro do VS Code.

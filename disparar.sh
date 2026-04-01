@@ -1,16 +1,18 @@
 #!/bin/bash
 
 # ═══════════════════════════════════════════════════════════════
-# FORMACAO D-11 — Disparar Agentes (Universal)
+# FORMACAO D-11 — Disparar Agentes (Cross-Platform)
 # ═══════════════════════════════════════════════════════════════
+#
+# Funciona em: macOS + Windows (Git Bash) + Linux
 #
 # Este script le os prompts de ativacao gerados pelos agentes
 # e abre uma nova instancia do Claude Code para cada agente,
 # com o prompt ja colado e enviado automaticamente.
 #
 # MODOS DE DISPATCH (detectado automaticamente):
-#   terminal-app  — Abre aba no Terminal.app com claude CLI (recomendado)
-#   vscode-tab    — Abre tab no VS Code via extensao Claude Code (legado)
+#   terminal-app  — Abre aba no terminal nativo com claude CLI
+#   vscode-tab    — Abre tab no VS Code via extensao Claude Code
 #   manual        — Mostra instrucoes para o comandante colar manualmente
 #
 # Como usar:
@@ -23,9 +25,6 @@
 #   ./disparar.sh --detect             # Re-detecta o modo automaticamente
 #
 # Os prompts ficam em .delta-11/ativacoes/*.txt
-#
-# REQUER: macOS com Permissao de Acessibilidade em:
-#   System Settings > Privacy & Security > Accessibility
 #
 # ═══════════════════════════════════════════════════════════════
 
@@ -44,35 +43,119 @@ DISPATCH_MODE_FILE=".delta-11/.dispatch-mode"
 PROJECT_PATH=$(pwd)
 
 # ═══════════════════════════════════════════════════════════════
+# DETECCAO DE SO (cross-platform)
+# ═══════════════════════════════════════════════════════════════
+
+OS_TYPE="desconhecido"
+case "$(uname -s)" in
+    Darwin)                    OS_TYPE="macos" ;;
+    Linux)
+        if [ -n "$WSL_DISTRO_NAME" ]; then
+            OS_TYPE="wsl"
+        elif grep -qi microsoft /proc/version 2>/dev/null; then
+            OS_TYPE="wsl"
+        else
+            OS_TYPE="linux"
+        fi
+        ;;
+    MINGW*|MSYS*|CYGWIN*)     OS_TYPE="windows" ;;
+esac
+
+# ═══════════════════════════════════════════════════════════════
+# FUNCOES CROSS-PLATFORM
+# ═══════════════════════════════════════════════════════════════
+
+copiar_para_clipboard() {
+    local arquivo="$1"
+    case "$OS_TYPE" in
+        macos)
+            cat "$arquivo" | pbcopy
+            ;;
+        windows|wsl)
+            cat "$arquivo" | clip.exe 2>/dev/null || cat "$arquivo" | pbcopy 2>/dev/null || return 1
+            ;;
+        linux)
+            if command -v xclip &>/dev/null; then
+                cat "$arquivo" | xclip -selection clipboard
+            elif command -v xsel &>/dev/null; then
+                cat "$arquivo" | xsel --clipboard --input
+            elif command -v wl-copy &>/dev/null; then
+                cat "$arquivo" | wl-copy
+            else
+                echo -e "  ${RED}Clipboard indisponivel. Instale xclip, xsel ou wl-clipboard.${NC}"
+                return 1
+            fi
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+vscode_esta_rodando() {
+    case "$OS_TYPE" in
+        macos)
+            pgrep -f "Visual Studio Code" > /dev/null 2>&1
+            ;;
+        windows)
+            tasklist.exe /FI "IMAGENAME eq Code.exe" 2>/dev/null | grep -qi "Code.exe" 2>/dev/null
+            ;;
+        wsl)
+            tasklist.exe /FI "IMAGENAME eq Code.exe" 2>/dev/null | grep -qi "Code.exe" 2>/dev/null
+            ;;
+        linux)
+            pgrep -f "Visual Studio Code" > /dev/null 2>&1
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+claude_cli_disponivel() {
+    command -v claude &>/dev/null
+}
+
+# ═══════════════════════════════════════════════════════════════
 # DETECCAO DE MODO
 # ═══════════════════════════════════════════════════════════════
 
 detectar_modo() {
-    # 1. Preferencia salva
-    if [ -f "$DISPATCH_MODE_FILE" ]; then
-        local modo_salvo
-        modo_salvo=$(cat "$DISPATCH_MODE_FILE" | tr -d '[:space:]')
-        if [[ "$modo_salvo" == "terminal-app" || "$modo_salvo" == "vscode-tab" || "$modo_salvo" == "manual" ]]; then
-            echo "$modo_salvo"
-            return 0
-        fi
-    fi
-
-    # 2. CLI disponivel? (mais confiavel, zero conflito de lock)
-    if command -v claude &>/dev/null; then
-        echo "terminal-app" > "$DISPATCH_MODE_FILE"
-        echo "terminal-app"
-        return 0
-    fi
-
-    # 3. Extensao do VS Code instalada?
-    if command -v code &>/dev/null && code --list-extensions 2>/dev/null | grep -q "anthropic.claude-code"; then
+    # $VSCODE_PID tem prioridade ABSOLUTA — é a realidade do ambiente atual
+    # Sobrescreve qualquer valor gravado em disco
+    if [ -n "$VSCODE_PID" ]; then
         echo "vscode-tab" > "$DISPATCH_MODE_FILE"
         echo "vscode-tab"
         return 0
     fi
 
-    # 4. Nada encontrado
+    # Se NÃO está no VS Code, verificar preferência salva
+    if [ -f "$DISPATCH_MODE_FILE" ]; then
+        local modo_salvo
+        modo_salvo=$(cat "$DISPATCH_MODE_FILE" | tr -d '[:space:]')
+        # Se o arquivo diz vscode-tab mas $VSCODE_PID não existe,
+        # significa que não estamos no VS Code — corrigir
+        if [ "$modo_salvo" = "vscode-tab" ]; then
+            # Não estamos no VS Code agora — verificar se CLI existe
+            if claude_cli_disponivel; then
+                echo "terminal-app" > "$DISPATCH_MODE_FILE"
+                echo "terminal-app"
+                return 0
+            fi
+        elif [[ "$modo_salvo" == "terminal-app" || "$modo_salvo" == "manual" ]]; then
+            echo "$modo_salvo"
+            return 0
+        fi
+    fi
+
+    # Detecção automática
+    if claude_cli_disponivel; then
+        echo "terminal-app" > "$DISPATCH_MODE_FILE"
+        echo "terminal-app"
+        return 0
+    fi
+
+    # Nada encontrado
     echo "manual" > "$DISPATCH_MODE_FILE"
     echo "manual"
 }
@@ -85,37 +168,66 @@ verificar_saude() {
     local modo="$1"
 
     if [ "$modo" = "terminal-app" ]; then
-        # Verificar se Terminal.app consegue ser ativado
-        if ! osascript -e 'tell application "Terminal" to activate' &>/dev/null; then
-            echo -e "${RED}x Nao foi possivel ativar o Terminal.app.${NC}"
-            echo "  Verifique as permissoes de Acessibilidade em:"
-            echo "  System Settings > Privacy & Security > Accessibility"
-            return 1
-        fi
         # Verificar se claude CLI esta disponivel
-        if ! command -v claude &>/dev/null; then
+        if ! claude_cli_disponivel; then
             echo -e "${RED}x Comando 'claude' nao encontrado no PATH.${NC}"
             echo "  Instale o Claude Code CLI: npm install -g @anthropic-ai/claude-code"
             return 1
         fi
 
+        # Verificar terminal nativo por SO
+        case "$OS_TYPE" in
+            macos)
+                if ! osascript -e 'tell application "Terminal" to activate' &>/dev/null; then
+                    echo -e "${RED}x Nao foi possivel ativar o Terminal.app.${NC}"
+                    echo "  Verifique as permissoes de Acessibilidade em:"
+                    echo "  System Settings > Privacy & Security > Accessibility"
+                    return 1
+                fi
+                ;;
+            windows|wsl)
+                # Windows Terminal ou cmd.exe — sempre disponivel
+                ;;
+            linux)
+                # Verificar se algum terminal esta disponivel
+                if ! command -v gnome-terminal &>/dev/null && ! command -v konsole &>/dev/null && ! command -v xterm &>/dev/null; then
+                    echo -e "${YELLOW}Aviso: nenhum terminal conhecido encontrado (gnome-terminal, konsole, xterm).${NC}"
+                    echo "  O dispatch pode abrir uma janela nova em vez de aba."
+                fi
+                ;;
+        esac
+
     elif [ "$modo" = "vscode-tab" ]; then
         # Verificar se VS Code esta rodando
-        if ! pgrep -x "Code" > /dev/null; then
+        if ! vscode_esta_rodando; then
             echo -e "${RED}x VS Code nao esta rodando.${NC}"
             echo "  Abra o VS Code antes de disparar agentes."
             return 1
         fi
-        # Verificar se consegue ativar
-        if ! osascript -e 'tell application "Visual Studio Code" to activate' &>/dev/null; then
-            echo -e "${RED}x Nao foi possivel ativar o VS Code.${NC}"
-            echo "  Verifique as permissoes de Acessibilidade em:"
-            echo "  System Settings > Privacy & Security > Accessibility"
-            return 1
-        fi
+
+        # Verificar automacao por SO
+        case "$OS_TYPE" in
+            macos)
+                if ! osascript -e 'tell application id "com.microsoft.VSCode" to activate' &>/dev/null; then
+                    echo -e "${RED}x Nao foi possivel ativar o VS Code.${NC}"
+                    echo "  Verifique as permissoes de Acessibilidade em:"
+                    echo "  System Settings > Privacy & Security > Accessibility"
+                    return 1
+                fi
+                ;;
+            windows|wsl)
+                echo -e "  ${YELLOW}Aviso: dispatch vscode-tab no Windows usa automacao limitada.${NC}"
+                echo -e "  ${DIM}Recomendado: use --mode=terminal-app para melhor resultado.${NC}"
+                ;;
+            linux)
+                if ! command -v xdotool &>/dev/null; then
+                    echo -e "  ${YELLOW}Aviso: xdotool nao encontrado. Dispatch vscode-tab pode falhar.${NC}"
+                    echo -e "  ${DIM}Instale com: sudo apt install xdotool${NC}"
+                fi
+                ;;
+        esac
 
     elif [ "$modo" = "manual" ]; then
-        # Manual sempre funciona
         return 0
     fi
 
@@ -152,35 +264,52 @@ aviso_anti_colisao() {
 }
 
 # ═══════════════════════════════════════════════════════════════
-# ESTRATEGIA 1: TERMINAL.APP COM CLAUDE CLI (recomendado)
+# ESTRATEGIA 1: TERMINAL NATIVO COM CLAUDE CLI (recomendado)
 # ═══════════════════════════════════════════════════════════════
 #
 # Cada agente roda como processo claude CLI independente em
-# uma aba separada do Terminal.app. Zero conflito de lock file.
+# uma aba/janela separada do terminal. Zero conflito de lock file.
 #
 # ═══════════════════════════════════════════════════════════════
 
 disparar_terminal_app() {
     local projeto="$PROJECT_PATH"
 
+    case "$OS_TYPE" in
+        macos)
+            disparar_terminal_macos "$projeto"
+            ;;
+        windows)
+            disparar_terminal_windows "$projeto"
+            ;;
+        wsl)
+            disparar_terminal_wsl "$projeto"
+            ;;
+        linux)
+            disparar_terminal_linux "$projeto"
+            ;;
+        *)
+            echo -e "  ${RED}SO nao suportado para dispatch automatico: $OS_TYPE${NC}"
+            return 1
+            ;;
+    esac
+}
+
+disparar_terminal_macos() {
+    local projeto="$1"
+
     osascript << APPLESCRIPT
 tell application "Terminal"
     activate
     delay 0.5
-
-    -- Abrir nova aba
     tell application "System Events"
         tell process "Terminal"
             keystroke "t" using {command down}
         end tell
     end tell
     delay 1
-
-    -- CD para o projeto e iniciar claude CLI
     do script "cd '$projeto' && claude" in front window
     delay 6
-
-    -- Colar o prompt do clipboard
     tell application "System Events"
         tell process "Terminal"
             keystroke "v" using {command down}
@@ -192,8 +321,85 @@ end tell
 APPLESCRIPT
 }
 
+disparar_terminal_windows() {
+    local projeto="$1"
+    # Converter path do Git Bash para Windows (ex: /c/Users/... → C:\Users\...)
+    local projeto_win
+    projeto_win=$(cd "$projeto" && pwd -W 2>/dev/null || echo "$projeto")
+
+    if command -v wt.exe &>/dev/null; then
+        # Windows Terminal disponivel (padrao no Win 11)
+        wt.exe new-tab --title "D11" -- cmd /c "cd /d \"$projeto_win\" && claude" &
+        sleep 6
+        # Tentar colar via PowerShell SendKeys
+        powershell.exe -Command "
+            Add-Type -AssemblyName System.Windows.Forms
+            Start-Sleep -Seconds 1
+            [System.Windows.Forms.SendKeys]::SendWait('^v')
+            Start-Sleep -Milliseconds 500
+            [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
+        " 2>/dev/null &
+    else
+        # Fallback: nova janela cmd
+        start cmd /k "cd /d \"$projeto_win\" && claude" 2>/dev/null || \
+            cmd.exe /c "start cmd /k \"cd /d $projeto_win && claude\"" 2>/dev/null
+        sleep 6
+        echo -e "  ${YELLOW}Prompt copiado. Cole com Ctrl+V na janela que abriu.${NC}"
+    fi
+}
+
+disparar_terminal_wsl() {
+    local projeto="$1"
+    # WSL: usar PowerShell do Windows para abrir nova janela
+    if command -v wt.exe &>/dev/null; then
+        wt.exe new-tab -- wsl.exe -d "$WSL_DISTRO_NAME" -- bash -c "cd '$projeto' && claude" &
+        sleep 6
+        powershell.exe -Command "
+            Add-Type -AssemblyName System.Windows.Forms
+            Start-Sleep -Seconds 1
+            [System.Windows.Forms.SendKeys]::SendWait('^v')
+            Start-Sleep -Milliseconds 500
+            [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
+        " 2>/dev/null &
+    else
+        # Fallback manual
+        echo -e "  ${YELLOW}Abra um novo terminal WSL e rode:${NC}"
+        echo -e "  ${CYAN}cd '$projeto' && claude${NC}"
+        echo -e "  ${YELLOW}Depois cole o prompt com Ctrl+Shift+V${NC}"
+    fi
+}
+
+disparar_terminal_linux() {
+    local projeto="$1"
+
+    if command -v gnome-terminal &>/dev/null; then
+        gnome-terminal --tab -- bash -c "cd '$projeto' && claude; exec bash" 2>/dev/null &
+        sleep 6
+        # Tentar colar via xdotool
+        if command -v xdotool &>/dev/null; then
+            xdotool key ctrl+shift+v 2>/dev/null
+            sleep 0.5
+            xdotool key Return 2>/dev/null
+        else
+            echo -e "  ${YELLOW}Prompt copiado. Cole com Ctrl+Shift+V na aba que abriu.${NC}"
+        fi
+    elif command -v konsole &>/dev/null; then
+        konsole --new-tab -e bash -c "cd '$projeto' && claude; exec bash" 2>/dev/null &
+        sleep 6
+        echo -e "  ${YELLOW}Prompt copiado. Cole com Ctrl+Shift+V na aba que abriu.${NC}"
+    elif command -v xterm &>/dev/null; then
+        xterm -e "cd '$projeto' && claude" 2>/dev/null &
+        sleep 6
+        echo -e "  ${YELLOW}Prompt copiado. Cole com Ctrl+Shift+V na janela que abriu.${NC}"
+    else
+        echo -e "  ${RED}Nenhum terminal encontrado (gnome-terminal, konsole, xterm).${NC}"
+        echo -e "  ${YELLOW}Abra um terminal manualmente, cd para '$projeto' e rode 'claude'.${NC}"
+        return 1
+    fi
+}
+
 # ═══════════════════════════════════════════════════════════════
-# ESTRATEGIA 2: VS CODE TAB (legado)
+# ESTRATEGIA 2: VS CODE TAB
 # ═══════════════════════════════════════════════════════════════
 #
 # Abre nova aba do Claude Code dentro do VS Code via extensao.
@@ -205,43 +411,135 @@ APPLESCRIPT
 disparar_vscode_tab() {
     local projeto="$PROJECT_PATH"
 
-    # Foca a janela do projeto correto via CLI (sem activate global).
-    # Isso garante que o Claude Code vai abrir no projeto certo,
-    # nao em outra janela do VS Code de outro projeto.
-    # NOTA: nao usa "activate" do AppleScript pois isso causa window jumping
-    # entre monitores e Spaces no macOS com multiplas janelas abertas.
-    if command -v code &>/dev/null && [ -n "$projeto" ]; then
-        code --reuse-window "$projeto" 2>/dev/null || true
-        sleep 1.5
-    fi
+    case "$OS_TYPE" in
+        macos)
+            disparar_vscode_macos "$projeto"
+            ;;
+        windows|wsl)
+            disparar_vscode_windows "$projeto"
+            ;;
+        linux)
+            disparar_vscode_linux "$projeto"
+            ;;
+        *)
+            echo -e "  ${RED}SO nao suportado para vscode-tab: $OS_TYPE${NC}"
+            return 1
+            ;;
+    esac
+}
 
-    # Envia keystrokes direto ao processo Code (sem activate)
-    osascript << 'APPLESCRIPT'
+disparar_vscode_macos() {
+    local projeto="$1"
+    local projeto_nome
+    projeto_nome=$(basename "$projeto")
+
+    # Targeting por titulo de janela + bundle ID (universal)
+    osascript << APPLESCRIPT
+set projectFolder to "$projeto_nome"
+
 tell application "System Events"
     tell process "Code"
-        -- Abrir Command Palette: Cmd+Shift+P
-        -- NAO usar "tell application VS Code to activate" aqui --
-        -- isso causa window jumping entre monitores e Spaces no macOS
+        set targetWindow to missing value
+        repeat with w in windows
+            try
+                if title of w contains projectFolder then
+                    set targetWindow to w
+                    exit repeat
+                end if
+            end try
+        end repeat
+        if targetWindow is not missing value then
+            perform action "AXRaise" of targetWindow
+            delay 0.3
+        end if
+    end tell
+end tell
+
+tell application id "com.microsoft.VSCode"
+    activate
+end tell
+delay 1.5
+
+tell application "System Events"
+    tell process "Code"
+        set frontTitle to title of front window
+        if frontTitle does not contain projectFolder then
+            error "Janela errada no topo: " & frontTitle & " (esperava " & projectFolder & ")"
+        end if
         keystroke "p" using {command down, shift down}
-        delay 0.5
-
-        -- Digitar o comando
+        delay 0.8
         keystroke "Claude Code: Open in New Tab"
-        delay 1
-
-        -- Pressionar Enter para executar
+        delay 1.2
         keystroke return
-        delay 3
-
-        -- Colar o prompt do clipboard (Cmd+V)
+        delay 3.5
         keystroke "v" using {command down}
         delay 0.5
-
-        -- Pressionar Enter para enviar
         keystroke return
     end tell
 end tell
 APPLESCRIPT
+}
+
+disparar_vscode_windows() {
+    local projeto="$1"
+
+    # No Windows, abrir o projeto no VS Code e usar PowerShell SendKeys
+    # para Ctrl+Shift+P → "Claude Code: Open in New Tab"
+    code "$projeto" 2>/dev/null || true
+    sleep 2
+
+    powershell.exe -Command "
+        Add-Type -AssemblyName System.Windows.Forms
+        # Ctrl+Shift+P para Command Palette
+        [System.Windows.Forms.SendKeys]::SendWait('^+p')
+        Start-Sleep -Milliseconds 800
+        # Digitar comando
+        [System.Windows.Forms.SendKeys]::SendWait('Claude Code: Open in New Tab')
+        Start-Sleep -Milliseconds 1200
+        # Enter
+        [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
+        Start-Sleep -Seconds 4
+        # Ctrl+V para colar
+        [System.Windows.Forms.SendKeys]::SendWait('^v')
+        Start-Sleep -Milliseconds 500
+        # Enter para enviar
+        [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
+    " 2>/dev/null
+
+    if [ $? -ne 0 ]; then
+        echo -e "  ${RED}SendKeys falhou.${NC}"
+        echo -e "  ${YELLOW}O prompt foi copiado. Abra o VS Code e cole manualmente.${NC}"
+        return 1
+    fi
+}
+
+disparar_vscode_linux() {
+    local projeto="$1"
+
+    # No Linux, usar xdotool para enviar teclas ao VS Code
+    code "$projeto" 2>/dev/null || true
+    sleep 2
+
+    if command -v xdotool &>/dev/null; then
+        # Ctrl+Shift+P para Command Palette
+        xdotool key ctrl+shift+p 2>/dev/null
+        sleep 0.8
+        # Digitar comando
+        xdotool type --clearmodifiers "Claude Code: Open in New Tab" 2>/dev/null
+        sleep 1.2
+        # Enter
+        xdotool key Return 2>/dev/null
+        sleep 4
+        # Ctrl+V para colar
+        xdotool key ctrl+v 2>/dev/null
+        sleep 0.5
+        # Enter para enviar
+        xdotool key Return 2>/dev/null
+    else
+        echo -e "  ${YELLOW}xdotool nao encontrado. Instale com: sudo apt install xdotool${NC}"
+        echo -e "  ${YELLOW}O prompt foi copiado. Abra o VS Code e cole manualmente.${NC}"
+        return 1
+    fi
 }
 
 # ═══════════════════════════════════════════════════════════════
@@ -281,8 +579,12 @@ disparar_agente() {
     # Aviso visual anti-colisao
     aviso_anti_colisao "$nome" "$modo"
 
-    # Copiar prompt para clipboard
-    cat "$arquivo" | pbcopy
+    # Copiar prompt para clipboard (cross-platform)
+    if ! copiar_para_clipboard "$arquivo"; then
+        echo -e "  ${RED}Falha ao copiar para clipboard. Caindo para modo manual.${NC}"
+        disparar_manual "$arquivo" "$nome"
+        return 0
+    fi
 
     # Disparar conforme o modo
     local resultado=0
@@ -363,7 +665,7 @@ done
 
 echo ""
 echo -e "${CYAN}═══════════════════════════════════════════════════${NC}"
-echo -e "${BOLD}  FORMACAO D-11 — Disparando Agentes${NC}"
+echo -e "${BOLD}  FORMACAO D-11 — Disparando Agentes [${OS_TYPE}]${NC}"
 echo -e "${CYAN}═══════════════════════════════════════════════════${NC}"
 echo ""
 
@@ -529,8 +831,11 @@ echo ""
 
 case $DISPATCH_MODE in
     terminal-app)
-        echo -e "  Cada agente esta rodando em uma aba do Terminal.app."
-        echo -e "  Alterne entre as abas com ${BOLD}Cmd+Shift+[${NC} e ${BOLD}Cmd+Shift+]${NC}"
+        echo -e "  Cada agente esta rodando em uma aba/janela do terminal."
+        case "$OS_TYPE" in
+            macos)  echo -e "  Alterne entre as abas com ${BOLD}Cmd+Shift+[${NC} e ${BOLD}Cmd+Shift+]${NC}" ;;
+            *)      echo -e "  Alterne entre as abas/janelas do terminal." ;;
+        esac
         ;;
     vscode-tab)
         echo -e "  Cada agente esta rodando em uma aba do Claude Code no VS Code."
