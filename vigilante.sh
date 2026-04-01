@@ -43,7 +43,13 @@ OS_TYPE="desconhecido"
 case "$(uname -s)" in
     Darwin*)  OS_TYPE="macos" ;;
     MINGW*|MSYS*|CYGWIN*)  OS_TYPE="windows" ;;
-    Linux*)   OS_TYPE="linux" ;;
+    Linux*)
+        if [ -n "$WSL_DISTRO_NAME" ] || grep -qi microsoft /proc/version 2>/dev/null; then
+            OS_TYPE="wsl"
+        else
+            OS_TYPE="linux"
+        fi
+        ;;
 esac
 
 # ─── Funções adaptadas por sistema operacional ──────────────
@@ -55,11 +61,10 @@ obter_mtime() {
         macos)
             stat -f "%m" "$arquivo" 2>/dev/null || echo "0"
             ;;
-        windows|linux)
+        windows|wsl|linux)
             stat -c "%Y" "$arquivo" 2>/dev/null || echo "0"
             ;;
         *)
-            # Fallback: tenta ambos
             stat -f "%m" "$arquivo" 2>/dev/null || stat -c "%Y" "$arquivo" 2>/dev/null || echo "0"
             ;;
     esac
@@ -71,11 +76,10 @@ notificar() {
 
     case "$OS_TYPE" in
         macos)
-            # Notificação nativa do macOS com som
             osascript -e "display notification \"$mensagem\" with title \"$titulo\" sound name \"Sosumi\"" 2>/dev/null
             ;;
-        windows)
-            # Notificação via PowerShell (funciona no Git Bash chamando powershell.exe)
+        windows|wsl)
+            # Notificação via PowerShell (funciona no Git Bash e WSL)
             powershell.exe -Command "
                 Add-Type -AssemblyName System.Windows.Forms
                 \$balloon = New-Object System.Windows.Forms.NotifyIcon
@@ -87,13 +91,11 @@ notificar() {
                 Start-Sleep -Seconds 3
                 \$balloon.Dispose()
             " 2>/dev/null
-            # Fallback se PowerShell falhar
             if [ $? -ne 0 ]; then
-                echo -e "\a"  # Beep sonoro como último recurso
+                echo -e "\a"
             fi
             ;;
         linux)
-            # Tenta notify-send (Ubuntu/Debian) ou fallback para beep
             if command -v notify-send &>/dev/null; then
                 notify-send "$titulo" "$mensagem" 2>/dev/null
             else
@@ -110,6 +112,9 @@ processo_rodando() {
         windows)
             # pgrep não existe no Git Bash — usar ps
             ps -p "$pid" > /dev/null 2>&1
+            ;;
+        wsl|macos|linux)
+            kill -0 "$pid" 2>/dev/null
             ;;
         *)
             kill -0 "$pid" 2>/dev/null
