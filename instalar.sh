@@ -183,6 +183,27 @@ fi
 
 echo ""
 
+# ─── PASSO 4.5: Detectar modo de dispatch ────────────────────
+
+echo -e "${YELLOW}[4.5/6]${NC} Detectando modo de dispatch..."
+
+if [ -n "$VSCODE_PID" ]; then
+    # Rodando dentro do terminal integrado do VS Code
+    echo "vscode-tab" > .delta-11/.dispatch-mode
+    echo -e "  ${GREEN}✓${NC} Detectado: VS Code (extensão) → ${CYAN}vscode-tab${NC}"
+elif [ -n "$TERM_PROGRAM" ] && [ "$TERM_PROGRAM" = "vscode" ]; then
+    # Outra forma de detectar terminal integrado do VS Code
+    echo "vscode-tab" > .delta-11/.dispatch-mode
+    echo -e "  ${GREEN}✓${NC} Detectado: VS Code (terminal integrado) → ${CYAN}vscode-tab${NC}"
+else
+    # Rodando no Terminal do macOS — não grava o arquivo
+    # ATLAS detectará automaticamente na primeira ativação dentro do VS Code
+    echo -e "  ${YELLOW}→${NC} Terminal externo detectado — modo será detectado automaticamente"
+    echo -e "    pelo ATLAS na primeira ativação dentro do VS Code"
+fi
+
+echo ""
+
 # ─── PASSO 5: Commit e Push ──────────────────────────────────
 
 echo -e "${YELLOW}[5/6]${NC} Fazendo commit e push..."
