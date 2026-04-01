@@ -187,9 +187,12 @@ for f in "$SOURCE/.delta-11/templates/"*.md; do
     [ -f "$f" ] && SYNC_FILES+=(".delta-11/templates/$(basename "$f")")
 done
 
-# Painel
+# Painel + imagem de fundo
 if [ -f "$SOURCE/.delta-11/painel.html" ]; then
     SYNC_FILES+=(".delta-11/painel.html")
+fi
+if [ -f "$SOURCE/.delta-11/bg-delta11.png" ]; then
+    SYNC_FILES+=(".delta-11/bg-delta11.png")
 fi
 
 # Hooks (scripts de rastreamento em tempo real)
@@ -211,7 +214,39 @@ for f in "$SOURCE"/*.sh; do
     [ -f "$f" ] && SYNC_FILES+=("$script_name")
 done
 
+# Skills globais (vão para ~/.claude/skills/, não para dentro dos projetos)
+SKILLS_UPDATED=0
+for skill_dir in "$SOURCE"/skills/*/; do
+    [ -d "$skill_dir" ] || continue
+    skill_name=$(basename "$skill_dir")
+    skill_dest="$HOME/.claude/skills/$skill_name"
+    if [ -d "$skill_dest" ]; then
+        # Comparar se houve mudança
+        if ! diff -rq "$skill_dir" "$skill_dest" &> /dev/null 2>&1; then
+            if [ "$DO_DRY" = true ]; then
+                echo -e "  ${YELLOW}[DRY]${NC} Atualizaria skill: $skill_name"
+            else
+                mkdir -p "$skill_dest"
+                cp -r "$skill_dir/." "$skill_dest/"
+                SKILLS_UPDATED=$((SKILLS_UPDATED + 1))
+            fi
+        fi
+    else
+        # Skill nova — instalar
+        if [ "$DO_DRY" = true ]; then
+            echo -e "  ${YELLOW}[DRY]${NC} Instalaria skill: $skill_name"
+        else
+            mkdir -p "$skill_dest"
+            cp -r "$skill_dir/." "$skill_dest/"
+            SKILLS_UPDATED=$((SKILLS_UPDATED + 1))
+        fi
+    fi
+done
+
 echo -e "  ${BOLD}Arquivos de sistema:${NC} ${#SYNC_FILES[@]}"
+if [ "$SKILLS_UPDATED" -gt 0 ]; then
+    echo -e "  ${BOLD}Skills atualizadas:${NC} ${SKILLS_UPDATED}"
+fi
 echo ""
 
 # ─── Modo diff ─────────────────────────────────────────────────
