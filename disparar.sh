@@ -101,13 +101,14 @@ verificar_saude() {
 
     elif [ "$modo" = "vscode-tab" ]; then
         # Verificar se VS Code esta rodando
-        if ! pgrep -x "Code" > /dev/null; then
+        # pgrep -x "Code" falha em alguns Macs — usar pgrep -f que busca no comando completo
+        if ! pgrep -f "Visual Studio Code" > /dev/null 2>&1; then
             echo -e "${RED}x VS Code nao esta rodando.${NC}"
             echo "  Abra o VS Code antes de disparar agentes."
             return 1
         fi
-        # Verificar se consegue ativar
-        if ! osascript -e 'tell application "Visual Studio Code" to activate' &>/dev/null; then
+        # Verificar se consegue ativar via bundle ID (universal, nao depende do nome do .app)
+        if ! osascript -e 'tell application id "com.microsoft.VSCode" to activate' &>/dev/null; then
             echo -e "${RED}x Nao foi possivel ativar o VS Code.${NC}"
             echo "  Verifique as permissoes de Acessibilidade em:"
             echo "  System Settings > Privacy & Security > Accessibility"
@@ -204,34 +205,60 @@ APPLESCRIPT
 
 disparar_vscode_tab() {
     local projeto="$PROJECT_PATH"
+    local projeto_nome
+    projeto_nome=$(basename "$projeto")
 
-    # Foca a janela do projeto correto via CLI (sem activate global).
-    # Isso garante que o Claude Code vai abrir no projeto certo,
-    # nao em outra janela do VS Code de outro projeto.
-    # NOTA: nao usa "activate" do AppleScript pois isso causa window jumping
-    # entre monitores e Spaces no macOS com multiplas janelas abertas.
-    if command -v code &>/dev/null && [ -n "$projeto" ]; then
-        code --reuse-window "$projeto" 2>/dev/null || true
-        sleep 1.5
-    fi
+    # Targeting por titulo de janela: encontra a janela do projeto certo
+    # antes de enviar keystrokes (evita mandar pro projeto errado)
+    osascript << APPLESCRIPT
+set projectFolder to "$projeto_nome"
 
-    # Envia keystrokes direto ao processo Code (sem activate)
-    osascript << 'APPLESCRIPT'
+-- Localizar a janela correta pelo titulo
 tell application "System Events"
     tell process "Code"
-        -- Abrir Command Palette: Cmd+Shift+P
-        -- NAO usar "tell application VS Code to activate" aqui --
-        -- isso causa window jumping entre monitores e Spaces no macOS
+        set targetWindow to missing value
+        repeat with w in windows
+            try
+                if title of w contains projectFolder then
+                    set targetWindow to w
+                    exit repeat
+                end if
+            end try
+        end repeat
+
+        -- Elevar a janela certa ANTES do activate
+        if targetWindow is not missing value then
+            perform action "AXRaise" of targetWindow
+            delay 0.3
+        end if
+    end tell
+end tell
+
+-- Ativar VS Code via bundle ID (universal, nao depende do nome do .app)
+tell application id "com.microsoft.VSCode"
+    activate
+end tell
+delay 1.5
+
+-- Verificar que a janela certa esta no topo
+tell application "System Events"
+    tell process "Code"
+        set frontTitle to title of front window
+        if frontTitle does not contain projectFolder then
+            error "Janela errada no topo: " & frontTitle & " (esperava " & projectFolder & ")"
+        end if
+
+        -- Abrir Command Palette
         keystroke "p" using {command down, shift down}
-        delay 0.5
+        delay 0.8
 
         -- Digitar o comando
         keystroke "Claude Code: Open in New Tab"
-        delay 1
+        delay 1.2
 
         -- Pressionar Enter para executar
         keystroke return
-        delay 3
+        delay 3.5
 
         -- Colar o prompt do clipboard (Cmd+V)
         keystroke "v" using {command down}
