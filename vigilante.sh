@@ -4,10 +4,12 @@
 # FORMAÇÃO Δ-11 — Vigilante (Monitor de Atividade)
 # ═══════════════════════════════════════════════════════════════
 #
+# Funciona em: macOS (Terminal e VS Code) + Windows (Git Bash e VS Code)
+#
 # O que este script faz:
 # Fica rodando no fundo verificando se os agentes Delta-11
 # estão trabalhando. Se ninguém se mexe por 15 minutos,
-# manda uma notificação no Mac com som e tenta redespachar
+# manda uma notificação no sistema e tenta redespachar
 # agentes que ficaram pendentes.
 #
 # Como usar:
@@ -35,7 +37,87 @@ LIMITE_SILENCIO=900    # Alertar após 15 minutos sem atividade (em segundos)
 PID_FILE="/tmp/delta11-vigilante-$$.pid"
 PROJECT_PATH="$(pwd)"
 
-# ─── Funções ─────────────────────────────────────────────────
+# ─── Detecção de sistema operacional ────────────────────────
+
+OS_TYPE="desconhecido"
+case "$(uname -s)" in
+    Darwin*)  OS_TYPE="macos" ;;
+    MINGW*|MSYS*|CYGWIN*)  OS_TYPE="windows" ;;
+    Linux*)   OS_TYPE="linux" ;;
+esac
+
+# ─── Funções adaptadas por sistema operacional ──────────────
+
+obter_mtime() {
+    # Retorna a data de modificação de um arquivo em epoch (segundos desde 1970)
+    local arquivo="$1"
+    case "$OS_TYPE" in
+        macos)
+            stat -f "%m" "$arquivo" 2>/dev/null || echo "0"
+            ;;
+        windows|linux)
+            stat -c "%Y" "$arquivo" 2>/dev/null || echo "0"
+            ;;
+        *)
+            # Fallback: tenta ambos
+            stat -f "%m" "$arquivo" 2>/dev/null || stat -c "%Y" "$arquivo" 2>/dev/null || echo "0"
+            ;;
+    esac
+}
+
+notificar() {
+    local titulo="$1"
+    local mensagem="$2"
+
+    case "$OS_TYPE" in
+        macos)
+            # Notificação nativa do macOS com som
+            osascript -e "display notification \"$mensagem\" with title \"$titulo\" sound name \"Sosumi\"" 2>/dev/null
+            ;;
+        windows)
+            # Notificação via PowerShell (funciona no Git Bash chamando powershell.exe)
+            powershell.exe -Command "
+                Add-Type -AssemblyName System.Windows.Forms
+                \$balloon = New-Object System.Windows.Forms.NotifyIcon
+                \$balloon.Icon = [System.Drawing.SystemIcons]::Warning
+                \$balloon.BalloonTipTitle = '$titulo'
+                \$balloon.BalloonTipText = '$mensagem'
+                \$balloon.Visible = \$true
+                \$balloon.ShowBalloonTip(10000)
+                Start-Sleep -Seconds 3
+                \$balloon.Dispose()
+            " 2>/dev/null
+            # Fallback se PowerShell falhar
+            if [ $? -ne 0 ]; then
+                echo -e "\a"  # Beep sonoro como último recurso
+            fi
+            ;;
+        linux)
+            # Tenta notify-send (Ubuntu/Debian) ou fallback para beep
+            if command -v notify-send &>/dev/null; then
+                notify-send "$titulo" "$mensagem" 2>/dev/null
+            else
+                echo -e "\a"
+            fi
+            ;;
+    esac
+}
+
+processo_rodando() {
+    # Verifica se um processo com determinado PID existe
+    local pid="$1"
+    case "$OS_TYPE" in
+        windows)
+            # pgrep não existe no Git Bash — usar ps
+            ps -p "$pid" > /dev/null 2>&1
+            ;;
+        *)
+            kill -0 "$pid" 2>/dev/null
+            ;;
+    esac
+}
+
+# ─── Funções do Heartbeat (checklist inteligente) ───────────
 
 verificar_delta11() {
     if [ ! -d ".delta-11" ]; then
@@ -47,7 +129,6 @@ verificar_delta11() {
 
 ultimo_toque() {
     # Encontra o arquivo mais recentemente modificado no .delta-11/
-    # Olha: kanban-data.js, activity-log.md, ack-*.txt, *-estado.md
     local mais_recente=0
 
     for arquivo in \
@@ -59,7 +140,7 @@ ultimo_toque() {
     do
         if [ -f "$arquivo" ]; then
             local mtime
-            mtime=$(stat -f "%m" "$arquivo" 2>/dev/null || echo "0")
+            mtime=$(obter_mtime "$arquivo")
             if [ "$mtime" -gt "$mais_recente" ] 2>/dev/null; then
                 mais_recente=$mtime
             fi
@@ -102,12 +183,49 @@ prompts_pendentes() {
     echo "$pendentes|$lista"
 }
 
-notificar() {
-    local titulo="$1"
-    local mensagem="$2"
+# ─── Checklist Heartbeat (inspirado no OpenClaw) ────────────
 
-    # Notificação nativa do macOS com som
-    osascript -e "display notification \"$mensagem\" with title \"$titulo\" sound name \"Sosumi\"" 2>/dev/null
+tarefas_orfas() {
+    # Verifica se há tarefas em FAZENDO no kanban sem agente ativo correspondente
+    local orfas=0
+    local lista=""
+
+    if [ ! -f ".delta-11/kanban.md" ]; then
+        echo "0|"
+        return
+    fi
+
+    # Procura linhas com "FAZENDO" e extrai o agente
+    while IFS= read -r linha; do
+        for agente_nome in ATLAS CRONOS FRONT PIXEL FORM BACK ENGINE VAULT SHIELD SCOUT; do
+            if echo "$linha" | grep -qi "$agente_nome" 2>/dev/null; then
+                local ack=".delta-11/ativacoes/ack-${agente_nome}.txt"
+                if [ ! -f "$ack" ]; then
+                    orfas=$((orfas + 1))
+                    # Evitar duplicados na lista
+                    if ! echo "$lista" | grep -q "$agente_nome"; then
+                        lista="$lista $agente_nome"
+                    fi
+                fi
+            fi
+        done
+    done < <(grep -A5 "FAZENDO\|fazendo\|Em andamento" .delta-11/kanban.md 2>/dev/null | grep -i "agente\|ATLAS\|CRONOS\|FRONT\|PIXEL\|FORM\|BACK\|ENGINE\|VAULT\|SHIELD\|SCOUT")
+
+    echo "$orfas|$lista"
+}
+
+bloqueios_antigos() {
+    # Verifica se há bloqueios registrados há mais de 30 minutos
+    local agora
+    agora=$(date +%s)
+    local count=0
+
+    if [ -f ".delta-11/kanban.md" ]; then
+        # Se existem linhas com BLOQUEIO no kanban, conta
+        count=$(grep -c "BLOQUEIO\|bloqueado\|BLOQUEADO" .delta-11/kanban.md 2>/dev/null || echo "0")
+    fi
+
+    echo "$count"
 }
 
 tentar_redespacho() {
@@ -122,6 +240,8 @@ tentar_redespacho() {
         return 1
     fi
 }
+
+# ─── Exibição de status ────────────────────────────────────
 
 exibir_status() {
     local agora
@@ -144,32 +264,62 @@ exibir_status() {
     local lista_pendentes
     lista_pendentes=$(echo "$resultado_pendentes" | cut -d'|' -f2)
 
+    local resultado_orfas
+    resultado_orfas=$(tarefas_orfas)
+    local num_orfas
+    num_orfas=$(echo "$resultado_orfas" | cut -d'|' -f1)
+    local lista_orfas
+    lista_orfas=$(echo "$resultado_orfas" | cut -d'|' -f2)
+
+    local num_bloqueios
+    num_bloqueios=$(bloqueios_antigos)
+
     # Formatar tempo de silêncio
     local min=$((silencio / 60))
     local seg=$((silencio % 60))
 
     echo ""
     echo -e "${CYAN}═══════════════════════════════════════════════════${NC}"
-    echo -e "${BOLD}  Δ-11 VIGILANTE — $(date '+%H:%M:%S')${NC}"
+    echo -e "${BOLD}  Δ-11 VIGILANTE — $(date '+%H:%M:%S') [${OS_TYPE}]${NC}"
     echo -e "${CYAN}═══════════════════════════════════════════════════${NC}"
-    echo -e "  Projeto:           ${DIM}$(basename "$PROJECT_PATH")${NC}"
-    echo -e "  Agentes ativos:    ${GREEN}${ativos}${NC}"
-    echo -e "  Último movimento:  ${min}m${seg}s atrás"
-    echo -e "  Prompts pendentes: ${num_pendentes}"
+    echo -e "  Projeto:             ${DIM}$(basename "$PROJECT_PATH")${NC}"
+    echo -e "  Agentes ativos:      ${GREEN}${ativos}${NC}"
+    echo -e "  Último movimento:    ${min}m${seg}s atrás"
+    echo ""
+    echo -e "  ${BOLD}HEARTBEAT:${NC}"
+    echo -e "  Prompts sem ACK:     ${num_pendentes}"
+    echo -e "  Tarefas sem agente:  ${num_orfas}"
+    echo -e "  Bloqueios no kanban: ${num_bloqueios}"
+
+    # Determinar se o sistema está travado
+    local travado=0
 
     if [ "$silencio" -gt "$LIMITE_SILENCIO" ]; then
+        travado=1
         echo ""
         echo -e "  ${RED}${BOLD}⚠ SISTEMA PARADO HÁ ${min} MINUTOS${NC}"
-
-        if [ "$num_pendentes" -gt 0 ]; then
-            echo -e "  ${YELLOW}Agentes não despachados:${lista_pendentes}${NC}"
-        fi
-
-        return 1  # Parado
-    else
-        echo -e "  ${GREEN}✓ Sistema ativo${NC}"
-        return 0  # OK
     fi
+
+    if [ "$num_pendentes" -gt 0 ]; then
+        travado=1
+        echo -e "  ${YELLOW}⚠ Agentes não despachados:${lista_pendentes}${NC}"
+    fi
+
+    if [ "$num_orfas" -gt 0 ]; then
+        travado=1
+        echo -e "  ${YELLOW}⚠ Tarefas em FAZENDO sem agente ativo:${lista_orfas}${NC}"
+    fi
+
+    if [ "$num_bloqueios" -gt 0 ]; then
+        echo -e "  ${YELLOW}⚠ ${num_bloqueios} bloqueio(s) registrado(s) no kanban${NC}"
+    fi
+
+    if [ "$travado" -eq 0 ]; then
+        echo ""
+        echo -e "  ${GREEN}✓ Sistema ativo — tudo fluindo${NC}"
+    fi
+
+    return $travado
 }
 
 ciclo_verificacao() {
@@ -177,9 +327,6 @@ ciclo_verificacao() {
     local parado=$?
 
     if [ "$parado" -eq 1 ]; then
-        # Sistema parado — notificar
-        local ativos
-        ativos=$(agentes_ativos)
         local resultado_pendentes
         resultado_pendentes=$(prompts_pendentes)
         local num_pendentes
@@ -187,17 +334,37 @@ ciclo_verificacao() {
         local lista_pendentes
         lista_pendentes=$(echo "$resultado_pendentes" | cut -d'|' -f2)
 
-        notificar "Δ-11 TRAVADO" "Sistema parado. ${num_pendentes} agente(s) pendente(s):${lista_pendentes}"
+        local resultado_orfas
+        resultado_orfas=$(tarefas_orfas)
+        local num_orfas
+        num_orfas=$(echo "$resultado_orfas" | cut -d'|' -f1)
+        local lista_orfas
+        lista_orfas=$(echo "$resultado_orfas" | cut -d'|' -f2)
 
-        # Tentar redespachar agentes pendentes
+        # Montar mensagem de notificação
+        local msg=""
+        [ "$num_pendentes" -gt 0 ] && msg="${msg}${num_pendentes} agente(s) sem ACK. "
+        [ "$num_orfas" -gt 0 ] && msg="${msg}${num_orfas} tarefa(s) sem agente ativo. "
+        [ -z "$msg" ] && msg="Nenhum arquivo foi atualizado nos últimos 15 minutos."
+
+        notificar "Δ-11 TRAVADO" "$msg"
+
+        # Tentar redespachar agentes pendentes (prompts sem ACK)
         if [ "$num_pendentes" -gt 0 ]; then
             echo ""
             echo -e "  ${BOLD}Tentando redespachar agentes pendentes...${NC}"
-
             for agente in $lista_pendentes; do
                 tentar_redespacho "$agente"
                 sleep 8  # Esperar entre dispatches (regra do Delta-11)
             done
+        fi
+
+        # Alertar sobre tarefas órfãs (não pode redespachar automaticamente — precisa do prompt)
+        if [ "$num_orfas" -gt 0 ]; then
+            echo ""
+            echo -e "  ${YELLOW}Tarefas órfãs detectadas (agente morreu no meio do trabalho):${NC}"
+            echo -e "  ${YELLOW}Agentes afetados:${lista_orfas}${NC}"
+            echo -e "  ${DIM}Para retomar: rode ./disparar.sh [AGENTE] ou abra o Claude Code e cole o prompt de retomada${NC}"
         fi
     fi
 }
@@ -217,7 +384,11 @@ case "${1:-}" in
             local_path=$(head -1 "$pid_file" 2>/dev/null)
             if [ "$local_path" = "$(pwd)" ]; then
                 pid=$(basename "$pid_file" | sed 's/delta11-vigilante-//' | sed 's/.pid//')
-                kill "$pid" 2>/dev/null && echo "Vigilante $pid parado." || echo "Vigilante $pid já não existia."
+                if processo_rodando "$pid"; then
+                    kill "$pid" 2>/dev/null && echo "Vigilante $pid parado."
+                else
+                    echo "Vigilante $pid já não existia."
+                fi
                 rm -f "$pid_file"
             fi
         done
@@ -230,6 +401,8 @@ case "${1:-}" in
         echo "  --once            Verifica uma vez e sai"
         echo "  --stop            Para o vigilante rodando em background"
         echo "  --help            Mostra esta ajuda"
+        echo ""
+        echo "  Sistema detectado: $OS_TYPE"
         exit 0
         ;;
 esac
@@ -248,6 +421,7 @@ echo -e "${CYAN}═════════════════════�
 echo -e "${BOLD}  Δ-11 VIGILANTE — Iniciando monitoramento${NC}"
 echo -e "${CYAN}═══════════════════════════════════════════════════${NC}"
 echo ""
+echo -e "  Sistema:           ${BOLD}${OS_TYPE}${NC}"
 echo -e "  Verificando a cada: ${BOLD}$((INTERVALO / 60)) minutos${NC}"
 echo -e "  Alerta após:       ${BOLD}$((LIMITE_SILENCIO / 60)) minutos${NC} sem atividade"
 echo -e "  Para parar:        ${DIM}Ctrl+C${NC}"
