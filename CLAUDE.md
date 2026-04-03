@@ -207,7 +207,7 @@ Agentes que NÃO escrevem código (ATLAS, CRONOS) não precisam deste passo.
 
 **Passo 3.6 — Simplificação de código (obrigatório para agentes que escrevem código)**
 
-Se você é um agente que escreve ou modifica código (ENGINE, BACK, FRONT, PIXEL, FORM, SCOUT), dispare o sub-agente `code-simplifier` APÓS o build-validator passar e ANTES de enviar para revisão do SHIELD:
+Se você é um agente que escreve ou modifica código (ENGINE, BACK, FRONT, PIXEL, FORM, SCOUT), dispare o sub-agente `code-simplifier` APÓS o build-validator passar e ANTES do contract-tester. **VAULT está isento** deste passo — SQL declarativo não se beneficia de simplificação:
 
 1. Leia o arquivo `.delta-11/sub-agentes/code-simplifier.md`
 2. Use a ferramenta Task para disparar um sub-agente do tipo `general-purpose` com o conteúdo desse arquivo como prompt, incluindo: "Projeto em: [caminho do projeto]. Arquivos modificados nesta tarefa: [lista de arquivos]. Simplifique agora."
@@ -219,7 +219,21 @@ Se você é um agente que escreve ou modifica código (ENGINE, BACK, FRONT, PIXE
 
 Agentes que NÃO escrevem código (ATLAS, CRONOS) não precisam deste passo.
 
-**Passo 3.7 — Envie para revisão do SHIELD (obrigatório na Fase 4 para agentes que escrevem código)**
+**Passo 3.7 — Verificação de contrato (obrigatório para agentes que escrevem código)**
+
+Se você é um agente que escreve ou modifica código (ENGINE, BACK, FRONT, PIXEL, FORM, SCOUT, VAULT), dispare o sub-agente `contract-tester` APÓS o code-simplifier (ou após o build-validator, no caso do VAULT) e ANTES de enviar para revisão do SHIELD:
+
+1. Leia o arquivo `.delta-11/sub-agentes/contract-tester.md`
+2. Use a ferramenta Task para disparar um sub-agente do tipo `general-purpose` com o conteúdo desse arquivo como prompt, incluindo no início: "Projeto em: [caminho do projeto]. Agente: [SEU-NOME]. Arquivos modificados nesta tarefa: [lista de arquivos]. Verifique se a implementação está conforme os contratos em project-core.md."
+3. Analise o relatório retornado:
+   - Se encontrar desvios entre implementação e contrato: corrija ANTES de avançar. NÃO mova a tarefa para revisão.
+   - Se conforme: registre o resultado no seu arquivo de estado e continue
+
+**POR QUE ESTE PASSO É OBRIGATÓRIO:** Build Validator verifica que o build funciona e que os testes de contrato existentes passam. Code Simplifier foca em complexidade desnecessária. Contract Tester é a camada de verificação holística que lê diretamente os contratos do project-core.md e confirma que o que foi implementado corresponde exatamente ao que foi definido — campos, validações, formatos, erros. Sem esta verificação, desvios do contrato só aparecem na revisão do SHIELD ou pior, em produção.
+
+Agentes que NÃO escrevem código (ATLAS, CRONOS) não precisam deste passo.
+
+**Passo 3.8 — Envie para revisão do SHIELD (obrigatório na Fase 4 para agentes que escrevem código)**
 
 Se você é um agente que escreve ou modifica código (ENGINE, BACK, FRONT, PIXEL, FORM, SCOUT) E está na Fase 4 (Desenvolvimento):
 
@@ -231,7 +245,7 @@ Se você é um agente que escreve ou modifica código (ENGINE, BACK, FRONT, PIXE
 
 Agentes que NÃO escrevem código (ATLAS, CRONOS) e o próprio SHIELD não precisam deste passo.
 
-**Passo 3.8 — Libere os locks dos arquivos que você travou (obrigatório para TODOS os agentes)**
+**Passo 3.9 — Libere os locks dos arquivos que você travou (obrigatório para TODOS os agentes)**
 
 Ao finalizar a tarefa (ou ao trocar para outra tarefa), delete TODOS os arquivos `.lock` que você criou no Passo 0.3:
 

@@ -129,7 +129,19 @@ Ao concluir qualquer trabalho, siga TODOS os passos definidos no arquivo `CLAUDE
    - Aguarde o relatório completo
    - **FAIL com blockers** → corrija ANTES de avançar. NÃO mova a tarefa para revisão.
    - **PASS ou warnings apenas** → registre o resultado no seu arquivo de estado e continue
-3.7. **REVISÃO DO SHIELD — OBRIGATÓRIO na Fase 4 para agentes que escrevem código:**
+3.6. **CODE SIMPLIFIER — OBRIGATÓRIO após build-validator passar e ANTES do contract-tester:**
+   - Leia `.delta-11/sub-agentes/code-simplifier.md`
+   - Dispare via Task tool (`subagent_type: "general-purpose"`) com o conteúdo do arquivo como prompt. Inclua: `"Projeto em: [caminho do projeto]. Arquivos modificados nesta tarefa: [lista de arquivos]. Simplifique agora."`
+   - Se fez mudanças: verifique que a funcionalidade está preservada antes de continuar
+   - Se nenhuma mudança necessária: continue normalmente
+   - **POR QUE ESTE PASSO É OBRIGATÓRIO:** Você que escreveu o código não vai achar que precisa simplificar — senão teria simplificado na hora. Este passo existe para ter um "olho externo" obrigatório sobre complexidade desnecessária.
+3.7. **CONTRACT TESTER — OBRIGATÓRIO após code-simplifier e ANTES do SHIELD:**
+   - Leia `.delta-11/sub-agentes/contract-tester.md`
+   - Dispare via Task tool (`subagent_type: "general-purpose"`) com o conteúdo do arquivo como prompt. Inclua: `"Projeto em: [caminho do projeto]. Agente: FORM. Arquivos modificados nesta tarefa: [lista]. Verifique conformidade com os contratos em project-core.md."`
+   - Se encontrar desvios entre implementação e contrato: corrija ANTES de avançar. NÃO mova para revisão.
+   - Se conforme: registre o resultado no seu arquivo de estado e continue
+   - **POR QUE ESTE PASSO É OBRIGATÓRIO:** Build Validator verifica o build. Code Simplifier foca em complexidade. Contract Tester é a única camada que lê diretamente os contratos do project-core.md e confirma que a implementação corresponde exatamente ao que foi definido — campos, validações, formatos, erros.
+3.8. **REVISÃO DO SHIELD — OBRIGATÓRIO na Fase 4 para agentes que escrevem código:**
    - Mova a tarefa para "REVISÃO" no kanban.md (NÃO para CONCLUÍDO diretamente)
    - Adicione no array `revisao` do kanban-data.js: `{ id: "T-XXX", desc: "Descrição", por: "FORM", revisor: "SHIELD" }`
    - Gere prompt do SHIELD em `.delta-11/ativacoes/janela-SHIELD-revisao-[ID-DA-TAREFA]-FORM.txt` (exemplo: `janela-SHIELD-revisao-T-025-FORM.txt`) listando arquivos modificados e o que foi feito — inclua o ID da tarefa no nome para evitar sobrescrita quando múltiplos agentes terminam ao mesmo tempo

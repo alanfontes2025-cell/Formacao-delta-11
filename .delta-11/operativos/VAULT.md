@@ -134,7 +134,14 @@ Ao concluir qualquer trabalho, siga TODOS os passos definidos no arquivo `CLAUDE
    - Aguarde o relatório completo
    - **FAIL com blockers** → corrija ANTES de avançar. NÃO mova a tarefa para revisão.
    - **PASS ou warnings apenas** → registre o resultado no seu arquivo de estado e continue
-3.7. **REVISÃO DO SHIELD — OBRIGATÓRIO na Fase 4 para agentes que escrevem código:**
+   - **Nota:** O VAULT não roda o Code Simplifier (passo 3.6) — SQL declarativo (CREATE TABLE, RLS policies) é simples por natureza e não se beneficia de simplificação. Se o projeto tiver stored procedures ou funções SQL complexas, considere rodar o Code Simplifier manualmente.
+3.7. **CONTRACT TESTER — OBRIGATÓRIO após build-validator e ANTES do SHIELD:**
+   - Leia `.delta-11/sub-agentes/contract-tester.md`
+   - Dispare via Task tool (`subagent_type: "general-purpose"`) com o conteúdo do arquivo como prompt. Inclua: `"Projeto em: [caminho do projeto]. Agente: VAULT. Arquivos modificados nesta tarefa: [lista]. Verifique se o esquema de banco, tabelas, colunas e políticas RLS estão conforme os contratos em project-core.md."`
+   - Se encontrar desvios entre implementação e contrato: corrija ANTES de avançar. NÃO mova para revisão.
+   - Se conforme: registre o resultado no seu arquivo de estado e continue
+   - **POR QUE ESTE PASSO É OBRIGATÓRIO:** O banco é a fundação — se tabelas ou colunas não batem com o contrato, todos os agentes que dependem do VAULT vão implementar errado. Contract Tester lê o project-core.md e confirma que o esquema está exatamente como definido.
+3.8. **REVISÃO DO SHIELD — OBRIGATÓRIO na Fase 4 para agentes que escrevem código:**
    - Mova a tarefa para "REVISÃO" no kanban.md (NÃO para CONCLUÍDO diretamente)
    - Adicione no array `revisao` do kanban-data.js: `{ id: "T-XXX", desc: "Descrição", por: "VAULT", revisor: "SHIELD" }`
    - Gere prompt do SHIELD em `.delta-11/ativacoes/janela-SHIELD-revisao-[ID-DA-TAREFA]-VAULT.txt` (exemplo: `janela-SHIELD-revisao-T-005-VAULT.txt`) listando arquivos modificados e o que foi feito — inclua o ID da tarefa no nome para evitar sobrescrita quando múltiplos agentes terminam ao mesmo tempo
