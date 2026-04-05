@@ -195,6 +195,24 @@ Além dos checks existentes, na varredura preventiva verifique também:
 
 Para referência completa: `.delta-11/protocolos/regras-codigo.md`
 
+---
+
+## FERRAMENTAS ESPECIALIZADAS
+
+Voce tem acesso a ferramentas de auditoria que outros agentes NAO tem.
+Antes de comecar, verifique que estao instaladas:
+
+```bash
+bash .delta-11/ferramentas/verificar-dependencias.sh SCOUT
+```
+
+### Auditoria Lighthouse
+```bash
+bash .delta-11/ferramentas/scout-lighthouse.sh [url]
+```
+Roda Google Lighthouse e retorna scores de performance, acessibilidade, SEO e boas praticas.
+Use para validar qualidade geral do projeto antes do lancamento.
+
 ## PROTOCOLO DE FINALIZAÇÃO
 
 Ao concluir qualquer trabalho, siga TODOS os passos definidos no arquivo `CLAUDE.md` na seção "PROTOCOLO DE FINALIZAÇÃO DE TAREFA". Isso inclui:

@@ -477,8 +477,33 @@ Substitua `[NOME-DO-AGENTE]` pelo nome real. Exiba este bloco e AGUARDE 5 SEGUND
 **PASSO 1 — Copiar e disparar:**
 
 ```bash
+# 0. Ler perfil do agente (especializacao real)
+AGENT_NAME="[NOME-DO-AGENTE]"  # Substituir pelo nome real
+PERFIL=".delta-11/perfis/${AGENT_NAME}.json"
+CLAUDE_CMD="claude"
+AGENT_MODEL=""
+
+if [ -f "$PERFIL" ] && command -v jq &>/dev/null; then
+    AGENT_MODEL=$(jq -r '.model // empty' "$PERFIL")
+    MCP_CONFIG=$(jq -r '.mcp_config // empty' "$PERFIL")
+
+    [ -n "$AGENT_MODEL" ] && CLAUDE_CMD="$CLAUDE_CMD --model $AGENT_MODEL"
+    [ -n "$MCP_CONFIG" ] && [ -f "$MCP_CONFIG" ] && CLAUDE_CMD="$CLAUDE_CMD --mcp-config $MCP_CONFIG"
+fi
+
 # 1. Copiar o prompt do agente para o clipboard
-cat .delta-11/ativacoes/[ARQUIVO].txt | pbcopy
+# Para vscode-tab: prefixar com /model se o agente tem modelo definido
+if [ -n "$AGENT_MODEL" ]; then
+    # Criar copia temporaria com /model prefixado
+    TEMP_PROMPT=$(mktemp)
+    echo "/model $AGENT_MODEL" > "$TEMP_PROMPT"
+    echo "" >> "$TEMP_PROMPT"
+    cat .delta-11/ativacoes/[ARQUIVO].txt >> "$TEMP_PROMPT"
+    cat "$TEMP_PROMPT" | pbcopy
+    rm -f "$TEMP_PROMPT"
+else
+    cat .delta-11/ativacoes/[ARQUIVO].txt | pbcopy
+fi
 
 # 2. Aguardar o comandante ler o aviso
 sleep 5
@@ -509,7 +534,7 @@ tell application "Terminal"
         end tell
     end tell
     delay 1
-    do script "cd '$PROJECT_PATH' && claude" in front window
+    do script "cd '$PROJECT_PATH' && $CLAUDE_CMD" in front window
     delay 6
     tell application "System Events"
         tell process "Terminal"

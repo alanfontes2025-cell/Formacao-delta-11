@@ -1,0 +1,11 @@
+{
+  "agent": "FORM",
+  "model": "sonnet",
+  "mcp_config": "",
+  "allowed_tools": [],
+  "disallowed_tools": [],
+  "append_system_prompt": "",
+  "ferramentas": [],
+  "conhecimento": [".delta-11/conhecimento/react-form-patterns.md"],
+  "knowledge_fetch": []
+}

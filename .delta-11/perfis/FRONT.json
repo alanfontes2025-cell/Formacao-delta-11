@@ -1,0 +1,11 @@
+{
+  "agent": "FRONT",
+  "model": "sonnet",
+  "mcp_config": "",
+  "allowed_tools": [],
+  "disallowed_tools": [],
+  "append_system_prompt": "",
+  "ferramentas": [],
+  "conhecimento": [".delta-11/conhecimento/react-component-patterns.md"],
+  "knowledge_fetch": []
+}

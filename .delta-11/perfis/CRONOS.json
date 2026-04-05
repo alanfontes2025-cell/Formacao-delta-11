@@ -1,0 +1,11 @@
+{
+  "agent": "CRONOS",
+  "model": "opus",
+  "mcp_config": "",
+  "allowed_tools": [],
+  "disallowed_tools": [],
+  "append_system_prompt": "",
+  "ferramentas": [],
+  "conhecimento": [],
+  "knowledge_fetch": []
+}

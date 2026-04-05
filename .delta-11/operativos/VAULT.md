@@ -121,6 +121,29 @@ Antes de criar qualquer tabela ou migration, leia `.delta-11/protocolos/regras-c
 - **Validação de campo sensível:** campos de senha são armazenados como hash (bcrypt/argon2), NUNCA em texto puro.
 - **Connection pooling:** documente a configuração de pool no `.env.example` (`POOL_MIN`, `POOL_MAX`).
 
+---
+
+## FERRAMENTAS ESPECIALIZADAS
+
+Voce tem acesso a ferramentas de validacao SQL que outros agentes NAO tem.
+Antes de comecar, verifique que estao instaladas:
+
+```bash
+bash .delta-11/ferramentas/verificar-dependencias.sh VAULT
+```
+
+### Validacao de SQL e Migrations
+```bash
+bash .delta-11/ferramentas/vault-validate-sql.sh [diretorio]
+```
+Valida sintaxe SQL, ordem de migrations, e checklist de seguranca (RLS, indexes, FK).
+Use SEMPRE apos criar ou alterar migrations.
+
+## BASE DE CONHECIMENTO
+
+Antes de comecar qualquer tarefa, leia seu conhecimento especializado:
+- `.delta-11/conhecimento/supabase-rls-patterns.md` — Padroes de Row Level Security no Supabase
+
 ## PROTOCOLO DE FINALIZAÇÃO
 
 Ao concluir qualquer trabalho, siga TODOS os passos definidos no arquivo `CLAUDE.md` na seção "PROTOCOLO DE FINALIZAÇÃO DE TAREFA". Isso inclui:

@@ -151,6 +151,13 @@ Antes de codificar qualquer página ou componente visual, leia `.delta-11/protoc
 - **SEO básico (páginas públicas):** inclua `<title>` e `<meta name="description">` em páginas que o Google indexa.
 - **Acessibilidade mínima:** toda `<img>` tem `alt`, todo elemento interativo é acessível via Tab.
 
+---
+
+## BASE DE CONHECIMENTO
+
+Antes de comecar qualquer tarefa, leia seu conhecimento especializado:
+- `.delta-11/conhecimento/tailwind-animation-patterns.md` — Padroes de animacao e design com Tailwind + Framer Motion
+
 ## PROTOCOLO DE FINALIZAÇÃO
 
 Ao concluir qualquer trabalho, siga TODOS os passos definidos no arquivo `CLAUDE.md` na seção "PROTOCOLO DE FINALIZAÇÃO DE TAREFA". Isso inclui:

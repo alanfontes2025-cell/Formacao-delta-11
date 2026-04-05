@@ -241,6 +241,29 @@ Além dos checks já existentes no seu operativo, ao revisar código de qualquer
 
 Para referência completa: `.delta-11/protocolos/regras-codigo.md`
 
+---
+
+## FERRAMENTAS ESPECIALIZADAS
+
+Voce tem acesso a ferramentas de seguranca que outros agentes NAO tem.
+Antes de comecar qualquer tarefa, verifique que estao instaladas:
+
+```bash
+bash .delta-11/ferramentas/verificar-dependencias.sh SHIELD
+```
+
+### Varredura de Seguranca Completa
+```bash
+bash .delta-11/ferramentas/shield-scan.sh [diretorio]
+```
+Roda semgrep (analise estatica), npm audit (dependencias) e deteccao de secrets.
+Retorna relatorio estruturado com PASS/FAIL. Use SEMPRE antes de aprovar codigo.
+
+## BASE DE CONHECIMENTO
+
+Antes de comecar qualquer tarefa de revisao, leia seu conhecimento especializado:
+- `.delta-11/conhecimento/owasp-top10-resumo.md` — Guia pratico OWASP Top 10 com checks para codigo
+
 ## PROTOCOLO DE FINALIZAÇÃO
 
 Ao concluir qualquer trabalho, siga TODOS os passos definidos no arquivo `CLAUDE.md` na seção "PROTOCOLO DE FINALIZAÇÃO DE TAREFA". Isso inclui:

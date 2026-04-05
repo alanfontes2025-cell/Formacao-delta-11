@@ -1,0 +1,11 @@
+{
+  "agent": "PIXEL",
+  "model": "sonnet",
+  "mcp_config": "",
+  "allowed_tools": [],
+  "disallowed_tools": [],
+  "append_system_prompt": "",
+  "ferramentas": [],
+  "conhecimento": [".delta-11/conhecimento/tailwind-animation-patterns.md"],
+  "knowledge_fetch": []
+}

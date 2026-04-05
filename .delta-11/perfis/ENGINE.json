@@ -1,0 +1,11 @@
+{
+  "agent": "ENGINE",
+  "model": "sonnet",
+  "mcp_config": ".delta-11/mcp/engine-mcp.json",
+  "allowed_tools": [],
+  "disallowed_tools": [],
+  "append_system_prompt": "",
+  "ferramentas": [".delta-11/ferramentas/engine-test-api.sh"],
+  "conhecimento": [".delta-11/conhecimento/nextjs-api-patterns.md"],
+  "knowledge_fetch": []
+}

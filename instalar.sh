@@ -146,6 +146,15 @@ fi
 
 FILE_COUNT=$(find . -type f -not -path './.git/*' -not -name 'instalar.sh' -not -name '.DS_Store' | wc -l | xargs)
 echo -e "  ${GREEN}✓${NC} ${FILE_COUNT} arquivos encontrados"
+
+# Garantir que todas as pastas de sistema existam
+mkdir -p .delta-11/perfis
+mkdir -p .delta-11/mcp
+mkdir -p .delta-11/ferramentas
+mkdir -p .delta-11/conhecimento
+mkdir -p .delta-11/hooks
+mkdir -p .delta-11/locks
+echo -e "  ${GREEN}✓${NC} Pastas de sistema verificadas"
 echo ""
 
 # ─── PASSO 4: Inicializar Git e criar repositório ────────────

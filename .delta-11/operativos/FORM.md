@@ -116,6 +116,13 @@ Antes de codificar qualquer formulário, leia `.delta-11/protocolos/regras-codig
 - **Mensagens de erro:** seja específico — "Email já cadastrado" em vez de "Dados inválidos". Não vaze informação de segurança (ex: não diga "usuário não existe").
 - **Autosave em formulários longos (>5 campos):** salvar rascunho no `localStorage` a cada 30s para não perder dados se o usuário fechar a aba.
 
+---
+
+## BASE DE CONHECIMENTO
+
+Antes de comecar qualquer tarefa, leia seu conhecimento especializado:
+- `.delta-11/conhecimento/react-form-patterns.md` — Padroes de formularios com React Hook Form + Zod
+
 ## PROTOCOLO DE FINALIZAÇÃO
 
 Ao concluir qualquer trabalho, siga TODOS os passos definidos no arquivo `CLAUDE.md` na seção "PROTOCOLO DE FINALIZAÇÃO DE TAREFA". Isso inclui:

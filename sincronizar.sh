@@ -14,6 +14,10 @@
 #   - .delta-11/protocolos/*.md
 #   - .delta-11/sub-agentes/*.md
 #   - .delta-11/templates/*.md
+#   - .delta-11/perfis/*.json        (perfil de cada agente: modelo, MCP, ferramentas)
+#   - .delta-11/mcp/*.json           (configurações MCP por agente)
+#   - .delta-11/ferramentas/*.sh     (scripts de ferramentas por agente)
+#   - .delta-11/conhecimento/*.md    (base de conhecimento por agente)
 #   - .delta-11/painel.html
 #   - .delta-11/hooks/*.js          (rastreamento em tempo real)
 #   - .claude/settings.json         (hooks do projeto — merge inteligente)
@@ -187,6 +191,26 @@ for f in "$SOURCE/.delta-11/templates/"*.md; do
     [ -f "$f" ] && SYNC_FILES+=(".delta-11/templates/$(basename "$f")")
 done
 
+# Perfis de agentes (.json)
+for f in "$SOURCE/.delta-11/perfis/"*.json; do
+    [ -f "$f" ] && SYNC_FILES+=(".delta-11/perfis/$(basename "$f")")
+done
+
+# Configurações MCP por agente (.json)
+for f in "$SOURCE/.delta-11/mcp/"*.json; do
+    [ -f "$f" ] && SYNC_FILES+=(".delta-11/mcp/$(basename "$f")")
+done
+
+# Ferramentas por agente (.sh)
+for f in "$SOURCE/.delta-11/ferramentas/"*.sh; do
+    [ -f "$f" ] && SYNC_FILES+=(".delta-11/ferramentas/$(basename "$f")")
+done
+
+# Conhecimento por agente (.md)
+for f in "$SOURCE/.delta-11/conhecimento/"*.md; do
+    [ -f "$f" ] && SYNC_FILES+=(".delta-11/conhecimento/$(basename "$f")")
+done
+
 # Painel + imagem de fundo + sprites dos agentes
 if [ -f "$SOURCE/.delta-11/painel.html" ]; then
     SYNC_FILES+=(".delta-11/painel.html")
@@ -309,6 +333,10 @@ sincronizar_destino() {
         mkdir -p "$destino/.delta-11/hooks" 2>/dev/null
         mkdir -p "$destino/.delta-11/locks" 2>/dev/null
         touch "$destino/.delta-11/locks/.gitkeep" 2>/dev/null
+        mkdir -p "$destino/.delta-11/perfis" 2>/dev/null
+        mkdir -p "$destino/.delta-11/mcp" 2>/dev/null
+        mkdir -p "$destino/.delta-11/ferramentas" 2>/dev/null
+        mkdir -p "$destino/.delta-11/conhecimento" 2>/dev/null
         mkdir -p "$destino/.claude" 2>/dev/null
     fi
 

@@ -155,6 +155,29 @@ Antes de escrever qualquer rota nova, leia `.delta-11/protocolos/regras-codigo.m
 - **N+1 queries:** NUNCA consulte o banco dentro de um loop. Use `include`, `join` ou batch.
 - **Efeitos em cascata:** ao mudar um endpoint (nome, tipo de campo, URL), atualize frontend + tipos TypeScript + testes.
 
+---
+
+## FERRAMENTAS ESPECIALIZADAS
+
+Voce tem acesso a ferramentas de teste de API que outros agentes NAO tem.
+Antes de comecar, verifique que estao instaladas:
+
+```bash
+bash .delta-11/ferramentas/verificar-dependencias.sh ENGINE
+```
+
+### Testes de API via curl
+```bash
+bash .delta-11/ferramentas/engine-test-api.sh [base_url]
+```
+Testa rotas da API automaticamente (status code, timeout, content-type).
+Use apos implementar rotas para validar que estao respondendo corretamente.
+
+## BASE DE CONHECIMENTO
+
+Antes de comecar qualquer tarefa, leia seu conhecimento especializado:
+- `.delta-11/conhecimento/nextjs-api-patterns.md` — Padroes de rotas API Next.js + Supabase
+
 ## PROTOCOLO DE FINALIZAÇÃO
 
 Ao concluir qualquer trabalho, siga TODOS os passos definidos no arquivo `CLAUDE.md` na seção "PROTOCOLO DE FINALIZAÇÃO DE TAREFA". Isso inclui:

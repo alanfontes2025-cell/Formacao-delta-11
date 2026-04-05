@@ -117,6 +117,119 @@ claude_cli_disponivel() {
 }
 
 # ═══════════════════════════════════════════════════════════════
+# PERFIL DO AGENTE — Especializacao real por agente
+# ═══════════════════════════════════════════════════════════════
+#
+# Le .delta-11/perfis/[AGENTE].json e constroi o comando claude
+# com flags especificas: --model, --mcp-config, --allowedTools
+#
+# Se o perfil nao existir, retorna "claude" (comportamento padrao).
+# Se jq nao estiver instalado, retorna "claude" (fallback seguro).
+#
+# ═══════════════════════════════════════════════════════════════
+
+PERFIS_DIR=".delta-11/perfis"
+
+construir_comando_claude() {
+    local nome="$1"
+    local perfil_arquivo="$PERFIS_DIR/${nome}.json"
+    local cmd="claude"
+
+    # Fallback: sem perfil ou sem jq → comando padrao
+    if [ ! -f "$perfil_arquivo" ]; then
+        echo "$cmd"
+        return 0
+    fi
+
+    if ! command -v jq &>/dev/null; then
+        echo -e "  ${YELLOW}Aviso: jq nao instalado. Perfil de ${nome} ignorado.${NC}" >&2
+        echo -e "  ${DIM}Instale com: brew install jq${NC}" >&2
+        echo "$cmd"
+        return 0
+    fi
+
+    # Ler campos do perfil
+    local model
+    model=$(jq -r '.model // empty' "$perfil_arquivo")
+    local mcp_config
+    mcp_config=$(jq -r '.mcp_config // empty' "$perfil_arquivo")
+    local append_prompt
+    append_prompt=$(jq -r '.append_system_prompt // empty' "$perfil_arquivo")
+
+    # Construir comando com flags
+    [ -n "$model" ] && cmd="$cmd --model $model"
+    [ -n "$mcp_config" ] && [ -f "$mcp_config" ] && cmd="$cmd --mcp-config $mcp_config"
+    [ -n "$append_prompt" ] && cmd="$cmd --append-system-prompt '$append_prompt'"
+
+    # Allowed tools (array → lista separada por espaco)
+    local tools
+    tools=$(jq -r '.allowed_tools // [] | if length > 0 then join(" ") else empty end' "$perfil_arquivo")
+    [ -n "$tools" ] && cmd="$cmd --allowedTools $tools"
+
+    # Disallowed tools
+    local disallowed
+    disallowed=$(jq -r '.disallowed_tools // [] | if length > 0 then join(" ") else empty end' "$perfil_arquivo")
+    [ -n "$disallowed" ] && cmd="$cmd --disallowedTools $disallowed"
+
+    echo "$cmd"
+}
+
+# Prefixar prompt com /model para modo vscode-tab
+# (VS Code nao aceita --model via CLI, entao injetamos /model no prompt)
+prefixar_modelo_no_prompt() {
+    local nome="$1"
+    local arquivo_prompt="$2"
+    local perfil_arquivo="$PERFIS_DIR/${nome}.json"
+
+    if [ ! -f "$perfil_arquivo" ] || ! command -v jq &>/dev/null; then
+        return 0
+    fi
+
+    local model
+    model=$(jq -r '.model // empty' "$perfil_arquivo")
+
+    if [ -n "$model" ]; then
+        # Criar arquivo temporario com /model prefixado
+        local temp_file
+        temp_file=$(mktemp)
+        echo "/model $model" > "$temp_file"
+        echo "" >> "$temp_file"
+        cat "$arquivo_prompt" >> "$temp_file"
+        # Substituir o arquivo original
+        mv "$temp_file" "$arquivo_prompt"
+    fi
+}
+
+# Extrair nome do agente do arquivo de ativacao
+extrair_nome_agente() {
+    local arquivo="$1"
+    local basename_sem_ext
+    basename_sem_ext=$(basename "$arquivo" .txt)
+
+    # Patterns: janela-1-VAULT, janela-SHIELD-revisao-T010-FRONT, retomada-ENGINE, erro-SCOUT
+    # Tentar extrair o nome do agente do conteudo do arquivo primeiro
+    if command -v grep &>/dev/null; then
+        local agente_no_conteudo
+        agente_no_conteudo=$(grep -oE 'Agente: (ATLAS|CRONOS|FRONT|PIXEL|FORM|BACK|ENGINE|VAULT|SHIELD|SCOUT)' "$arquivo" 2>/dev/null | head -1 | sed 's/Agente: //')
+        if [ -n "$agente_no_conteudo" ]; then
+            echo "$agente_no_conteudo"
+            return 0
+        fi
+    fi
+
+    # Fallback: tentar pelo nome do arquivo
+    for agente in ATLAS CRONOS FRONT PIXEL FORM BACK ENGINE VAULT SHIELD SCOUT; do
+        if echo "$basename_sem_ext" | grep -q "$agente"; then
+            echo "$agente"
+            return 0
+        fi
+    done
+
+    # Nao encontrado
+    echo ""
+}
+
+# ═══════════════════════════════════════════════════════════════
 # DETECCAO DE MODO
 # ═══════════════════════════════════════════════════════════════
 
@@ -297,6 +410,7 @@ disparar_terminal_app() {
 
 disparar_terminal_macos() {
     local projeto="$1"
+    local claude_cmd="${CLAUDE_CMD:-claude}"
 
     osascript << APPLESCRIPT
 tell application "Terminal"
@@ -308,7 +422,7 @@ tell application "Terminal"
         end tell
     end tell
     delay 1
-    do script "cd '$projeto' && claude" in front window
+    do script "cd '$projeto' && $claude_cmd" in front window
     delay 6
     tell application "System Events"
         tell process "Terminal"
@@ -323,13 +437,14 @@ APPLESCRIPT
 
 disparar_terminal_windows() {
     local projeto="$1"
+    local claude_cmd="${CLAUDE_CMD:-claude}"
     # Converter path do Git Bash para Windows (ex: /c/Users/... → C:\Users\...)
     local projeto_win
     projeto_win=$(cd "$projeto" && pwd -W 2>/dev/null || echo "$projeto")
 
     if command -v wt.exe &>/dev/null; then
         # Windows Terminal disponivel (padrao no Win 11)
-        wt.exe new-tab --title "D11" -- cmd /c "cd /d \"$projeto_win\" && claude" &
+        wt.exe new-tab --title "D11" -- cmd /c "cd /d \"$projeto_win\" && $claude_cmd" &
         sleep 6
         # Tentar colar via PowerShell SendKeys
         powershell.exe -Command "
@@ -341,8 +456,8 @@ disparar_terminal_windows() {
         " 2>/dev/null &
     else
         # Fallback: nova janela cmd
-        start cmd /k "cd /d \"$projeto_win\" && claude" 2>/dev/null || \
-            cmd.exe /c "start cmd /k \"cd /d $projeto_win && claude\"" 2>/dev/null
+        start cmd /k "cd /d \"$projeto_win\" && $claude_cmd" 2>/dev/null || \
+            cmd.exe /c "start cmd /k \"cd /d $projeto_win && $claude_cmd\"" 2>/dev/null
         sleep 6
         echo -e "  ${YELLOW}Prompt copiado. Cole com Ctrl+V na janela que abriu.${NC}"
     fi
@@ -350,9 +465,10 @@ disparar_terminal_windows() {
 
 disparar_terminal_wsl() {
     local projeto="$1"
+    local claude_cmd="${CLAUDE_CMD:-claude}"
     # WSL: usar PowerShell do Windows para abrir nova janela
     if command -v wt.exe &>/dev/null; then
-        wt.exe new-tab -- wsl.exe -d "$WSL_DISTRO_NAME" -- bash -c "cd '$projeto' && claude" &
+        wt.exe new-tab -- wsl.exe -d "$WSL_DISTRO_NAME" -- bash -c "cd '$projeto' && $claude_cmd" &
         sleep 6
         powershell.exe -Command "
             Add-Type -AssemblyName System.Windows.Forms
@@ -364,16 +480,17 @@ disparar_terminal_wsl() {
     else
         # Fallback manual
         echo -e "  ${YELLOW}Abra um novo terminal WSL e rode:${NC}"
-        echo -e "  ${CYAN}cd '$projeto' && claude${NC}"
+        echo -e "  ${CYAN}cd '$projeto' && $claude_cmd${NC}"
         echo -e "  ${YELLOW}Depois cole o prompt com Ctrl+Shift+V${NC}"
     fi
 }
 
 disparar_terminal_linux() {
     local projeto="$1"
+    local claude_cmd="${CLAUDE_CMD:-claude}"
 
     if command -v gnome-terminal &>/dev/null; then
-        gnome-terminal --tab -- bash -c "cd '$projeto' && claude; exec bash" 2>/dev/null &
+        gnome-terminal --tab -- bash -c "cd '$projeto' && $claude_cmd; exec bash" 2>/dev/null &
         sleep 6
         # Tentar colar via xdotool
         if command -v xdotool &>/dev/null; then
@@ -384,16 +501,16 @@ disparar_terminal_linux() {
             echo -e "  ${YELLOW}Prompt copiado. Cole com Ctrl+Shift+V na aba que abriu.${NC}"
         fi
     elif command -v konsole &>/dev/null; then
-        konsole --new-tab -e bash -c "cd '$projeto' && claude; exec bash" 2>/dev/null &
+        konsole --new-tab -e bash -c "cd '$projeto' && $claude_cmd; exec bash" 2>/dev/null &
         sleep 6
         echo -e "  ${YELLOW}Prompt copiado. Cole com Ctrl+Shift+V na aba que abriu.${NC}"
     elif command -v xterm &>/dev/null; then
-        xterm -e "cd '$projeto' && claude" 2>/dev/null &
+        xterm -e "cd '$projeto' && $claude_cmd" 2>/dev/null &
         sleep 6
         echo -e "  ${YELLOW}Prompt copiado. Cole com Ctrl+Shift+V na janela que abriu.${NC}"
     else
         echo -e "  ${RED}Nenhum terminal encontrado (gnome-terminal, konsole, xterm).${NC}"
-        echo -e "  ${YELLOW}Abra um terminal manualmente, cd para '$projeto' e rode 'claude'.${NC}"
+        echo -e "  ${YELLOW}Abra um terminal manualmente, cd para '$projeto' e rode '$claude_cmd'.${NC}"
         return 1
     fi
 }
@@ -571,6 +688,22 @@ disparar_agente() {
     local nome="$2"
     local modo="$3"
 
+    # Extrair nome do agente para buscar perfil
+    local agente_nome
+    agente_nome=$(extrair_nome_agente "$arquivo")
+
+    if [ -n "$agente_nome" ]; then
+        local perfil_arquivo="$PERFIS_DIR/${agente_nome}.json"
+        if [ -f "$perfil_arquivo" ] && command -v jq &>/dev/null; then
+            local model_info
+            model_info=$(jq -r '.model // empty' "$perfil_arquivo")
+            [ -n "$model_info" ] && echo -e "  ${DIM}Modelo: ${model_info}${NC}"
+            local mcp_info
+            mcp_info=$(jq -r '.mcp_config // empty' "$perfil_arquivo")
+            [ -n "$mcp_info" ] && [ -f "$mcp_info" ] && echo -e "  ${DIM}MCP: ${mcp_info}${NC}"
+        fi
+    fi
+
     if [ "$modo" = "manual" ]; then
         disparar_manual "$arquivo" "$nome"
         return 0
@@ -578,6 +711,11 @@ disparar_agente() {
 
     # Aviso visual anti-colisao
     aviso_anti_colisao "$nome" "$modo"
+
+    # Para vscode-tab: prefixar prompt com /model ANTES de copiar
+    if [ "$modo" = "vscode-tab" ] && [ -n "$agente_nome" ]; then
+        prefixar_modelo_no_prompt "$agente_nome" "$arquivo"
+    fi
 
     # Copiar prompt para clipboard (cross-platform)
     if ! copiar_para_clipboard "$arquivo"; then
@@ -590,6 +728,12 @@ disparar_agente() {
     local resultado=0
 
     if [ "$modo" = "terminal-app" ]; then
+        # Construir comando especializado com perfil do agente
+        local CLAUDE_CMD="claude"
+        if [ -n "$agente_nome" ]; then
+            CLAUDE_CMD=$(construir_comando_claude "$agente_nome")
+        fi
+        export CLAUDE_CMD
         disparar_terminal_app || resultado=$?
     elif [ "$modo" = "vscode-tab" ]; then
         disparar_vscode_tab || resultado=$?

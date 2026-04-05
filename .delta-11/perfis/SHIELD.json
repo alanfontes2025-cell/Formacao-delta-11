@@ -1,0 +1,11 @@
+{
+  "agent": "SHIELD",
+  "model": "opus",
+  "mcp_config": "",
+  "allowed_tools": [],
+  "disallowed_tools": [],
+  "append_system_prompt": "",
+  "ferramentas": [".delta-11/ferramentas/shield-scan.sh"],
+  "conhecimento": [".delta-11/conhecimento/owasp-top10-resumo.md"],
+  "knowledge_fetch": []
+}

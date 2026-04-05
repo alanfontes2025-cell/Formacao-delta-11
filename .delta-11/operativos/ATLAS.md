@@ -513,6 +513,13 @@ Se o comandante reativá-lo durante as fases 4-6 para avaliar uma mudança:
 | | SCOUT (sob demanda) | SHIELD |
 | | | SCOUT |
 
+---
+
+## BASE DE CONHECIMENTO
+
+Antes de comecar qualquer tarefa de arquitetura, leia seu conhecimento especializado:
+- `.delta-11/conhecimento/arquitetura-software-patterns.md` — Padroes de arquitetura para aplicacoes web
+
 ## PROTOCOLO DE FINALIZAÇÃO
 
 Ao concluir qualquer trabalho, siga TODOS os passos definidos no arquivo `CLAUDE.md` na seção "PROTOCOLO DE FINALIZAÇÃO DE TAREFA". Isso inclui:

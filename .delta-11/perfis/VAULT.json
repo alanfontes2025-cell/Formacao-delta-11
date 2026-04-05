@@ -1,0 +1,11 @@
+{
+  "agent": "VAULT",
+  "model": "sonnet",
+  "mcp_config": ".delta-11/mcp/vault-mcp.json",
+  "allowed_tools": [],
+  "disallowed_tools": [],
+  "append_system_prompt": "",
+  "ferramentas": [".delta-11/ferramentas/vault-validate-sql.sh"],
+  "conhecimento": [".delta-11/conhecimento/supabase-rls-patterns.md"],
+  "knowledge_fetch": []
+}

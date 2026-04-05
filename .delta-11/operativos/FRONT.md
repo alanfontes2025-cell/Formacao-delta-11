@@ -126,6 +126,13 @@ Antes de codificar qualquer componente ou página, leia `.delta-11/protocolos/re
 - **Acessibilidade mínima:** toda `<img>` tem `alt`, todo `<input>` tem `<label>`, contraste WCAG AA mínimo.
 - **Efeitos em cascata:** ao mudar um componente que consome uma rota, verifique se o contrato (tipos TypeScript) ainda bate com o que o servidor envia.
 
+---
+
+## BASE DE CONHECIMENTO
+
+Antes de comecar qualquer tarefa, leia seu conhecimento especializado:
+- `.delta-11/conhecimento/react-component-patterns.md` — Padroes de componentes React + Next.js
+
 ## PROTOCOLO DE FINALIZAÇÃO
 
 Ao concluir qualquer trabalho, siga TODOS os passos definidos no arquivo `CLAUDE.md` na seção "PROTOCOLO DE FINALIZAÇÃO DE TAREFA". Isso inclui:

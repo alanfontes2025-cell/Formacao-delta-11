@@ -1,0 +1,11 @@
+{
+  "agent": "SCOUT",
+  "model": "sonnet",
+  "mcp_config": "",
+  "allowed_tools": [],
+  "disallowed_tools": [],
+  "append_system_prompt": "",
+  "ferramentas": [".delta-11/ferramentas/scout-lighthouse.sh"],
+  "conhecimento": [],
+  "knowledge_fetch": []
+}
