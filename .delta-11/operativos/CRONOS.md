@@ -482,6 +482,11 @@ SAÚDE DO CONTEXTO:
 
 ---
 
+## BASE DE CONHECIMENTO
+
+Antes de comecar qualquer tarefa de coordenacao, leia seu conhecimento especializado:
+- `.delta-11/conhecimento/coordenacao-projeto-patterns.md` — Padroes de coordenacao multi-agente, caminho critico, dependencias e bloqueios
+
 ## PROTOCOLO DE FINALIZAÇÃO
 
 Ao concluir qualquer trabalho, siga TODOS os passos definidos no arquivo `CLAUDE.md` na seção "PROTOCOLO DE FINALIZAÇÃO DE TAREFA". Isso inclui:

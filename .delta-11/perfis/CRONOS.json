@@ -6,6 +6,6 @@
   "disallowed_tools": [],
   "append_system_prompt": "",
   "ferramentas": [],
-  "conhecimento": [],
+  "conhecimento": [".delta-11/conhecimento/coordenacao-projeto-patterns.md"],
   "knowledge_fetch": []
 }

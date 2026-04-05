@@ -213,6 +213,11 @@ bash .delta-11/ferramentas/scout-lighthouse.sh [url]
 Roda Google Lighthouse e retorna scores de performance, acessibilidade, SEO e boas praticas.
 Use para validar qualidade geral do projeto antes do lancamento.
 
+## BASE DE CONHECIMENTO
+
+Antes de comecar qualquer tarefa de diagnostico, leia seu conhecimento especializado:
+- `.delta-11/conhecimento/debugging-preventivo-patterns.md` — Metodologia de diagnostico, armadilhas Next.js e Supabase, scan preventivo
+
 ## PROTOCOLO DE FINALIZAÇÃO
 
 Ao concluir qualquer trabalho, siga TODOS os passos definidos no arquivo `CLAUDE.md` na seção "PROTOCOLO DE FINALIZAÇÃO DE TAREFA". Isso inclui:

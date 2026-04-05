@@ -6,6 +6,6 @@
   "disallowed_tools": [],
   "append_system_prompt": "",
   "ferramentas": [".delta-11/ferramentas/scout-lighthouse.sh"],
-  "conhecimento": [],
+  "conhecimento": [".delta-11/conhecimento/debugging-preventivo-patterns.md"],
   "knowledge_fetch": []
 }

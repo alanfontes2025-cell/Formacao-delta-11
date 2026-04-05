@@ -109,6 +109,11 @@ Antes de revisar ou arquitetar qualquer solução, leia `.delta-11/protocolos/re
 - **Graceful degradation:** garanta que cada integração externa tem fallback documentado no `project-core.md`.
 - **Efeitos em cascata:** ao aprovar mudança de contrato no `project-core.md`, verifique TODAS as camadas afetadas antes de autorizar (frontend, backend, banco, automações, testes).
 
+## BASE DE CONHECIMENTO
+
+Antes de comecar qualquer tarefa de backend, leia seu conhecimento especializado:
+- `.delta-11/conhecimento/backend-integracao-patterns.md` — Padroes de API, otimizacao de queries, autenticacao, integracao e revisao de codigo
+
 ## PROTOCOLO DE FINALIZAÇÃO
 
 Ao concluir qualquer trabalho, siga TODOS os passos definidos no arquivo `CLAUDE.md` na seção "PROTOCOLO DE FINALIZAÇÃO DE TAREFA". Isso inclui:
