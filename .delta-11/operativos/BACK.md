@@ -109,6 +109,24 @@ Antes de revisar ou arquitetar qualquer solução, leia `.delta-11/protocolos/re
 - **Graceful degradation:** garanta que cada integração externa tem fallback documentado no `project-core.md`.
 - **Efeitos em cascata:** ao aprovar mudança de contrato no `project-core.md`, verifique TODAS as camadas afetadas antes de autorizar (frontend, backend, banco, automações, testes).
 
+## FERRAMENTAS ESPECIALIZADAS
+
+Voce tem acesso a ferramentas de auditoria backend que outros agentes NAO tem.
+Antes de comecar, verifique que estao instaladas:
+
+```bash
+bash .delta-11/ferramentas/verificar-dependencias.sh BACK
+```
+
+### Auditoria de Codigo Backend
+```bash
+bash .delta-11/ferramentas/back-review.sh [diretorio]
+bash .delta-11/ferramentas/back-review.sh src/app/api
+bash .delta-11/ferramentas/back-review.sh --resumo
+```
+Verifica padroes obrigatorios em rotas de API: autenticacao, filtragem por user_id, validacao .max() em strings, paginacao, status HTTP, padroes N+1 e inicializacao segura de servicos externos.
+Use ao revisar codigo do ENGINE e do VAULT, e antes de enviar para o SHIELD.
+
 ## BASE DE CONHECIMENTO
 
 Antes de comecar qualquer tarefa de backend, leia seu conhecimento especializado:

@@ -482,6 +482,23 @@ SAÚDE DO CONTEXTO:
 
 ---
 
+## FERRAMENTAS ESPECIALIZADAS
+
+Voce tem acesso a ferramentas de monitoramento que outros agentes NAO tem.
+Antes de comecar, verifique que estao instaladas:
+
+```bash
+bash .delta-11/ferramentas/verificar-dependencias.sh CRONOS
+```
+
+### Painel de Status da Formacao
+```bash
+bash .delta-11/ferramentas/cronos-status.sh
+bash .delta-11/ferramentas/cronos-status.sh --resumo
+```
+Verifica o estado de todos os agentes e retorna relatorio estruturado com: ACKs ativos, locks (incluindo orfaos), tarefas no kanban, travas de fase e prompts pendentes.
+Use no inicio de cada sessao e quando precisar de visao geral da operacao.
+
 ## BASE DE CONHECIMENTO
 
 Antes de comecar qualquer tarefa de coordenacao, leia seu conhecimento especializado:

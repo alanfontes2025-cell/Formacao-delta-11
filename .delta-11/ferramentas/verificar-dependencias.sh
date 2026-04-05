@@ -55,6 +55,16 @@ case "$AGENTE" in
         verificar "lighthouse" "Auditoria de performance web" "npm install -g lighthouse"
         verificar "python3" "Parser de relatorios" "brew install python3"
         ;;
+    CRONOS)
+        verificar "bash" "Shell para scripts de monitoramento" "(ja incluso no macOS)"
+        verificar "grep" "Busca em arquivos de estado" "(ja incluso no macOS)"
+        verificar "stat" "Verificacao de idade de locks" "(ja incluso no macOS)"
+        ;;
+    BACK)
+        verificar "grep" "Busca de padroes em codigo" "(ja incluso no macOS)"
+        verificar "find" "Busca de arquivos de rotas" "(ja incluso no macOS)"
+        verificar "node" "Node.js para validacao de sintaxe" "brew install node"
+        ;;
     *)
         echo "  $AGENTE nao tem ferramentas especializadas para verificar."
         echo ""

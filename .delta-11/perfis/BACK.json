@@ -5,7 +5,7 @@
   "allowed_tools": [],
   "disallowed_tools": [],
   "append_system_prompt": "",
-  "ferramentas": [],
+  "ferramentas": [".delta-11/ferramentas/back-review.sh"],
   "conhecimento": [".delta-11/conhecimento/backend-integracao-patterns.md"],
   "knowledge_fetch": []
 }

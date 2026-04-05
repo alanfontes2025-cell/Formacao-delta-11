@@ -5,7 +5,7 @@
   "allowed_tools": [],
   "disallowed_tools": [],
   "append_system_prompt": "",
-  "ferramentas": [],
+  "ferramentas": [".delta-11/ferramentas/cronos-status.sh"],
   "conhecimento": [".delta-11/conhecimento/coordenacao-projeto-patterns.md"],
   "knowledge_fetch": []
 }
