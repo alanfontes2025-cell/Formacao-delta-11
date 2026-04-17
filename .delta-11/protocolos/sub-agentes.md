@@ -10,7 +10,7 @@ Diferença chave:
 
 ---
 
-## OS 4 SUB-AGENTES
+## OS 7 SUB-AGENTES (v4.0)
 
 ### 1. BUILD VALIDATOR — Validação de Build
 
@@ -85,7 +85,7 @@ Diferença chave:
 
 **Quando disparar:** OBRIGATÓRIO antes do deploy final (Fase 6)
 
-**Quem dispara:** SHIELD (antes de apresentar relatório final ao comandante)
+**Quem dispara:** SHIELD (antes de apresentar relatório final ao comandante) — OU hook UserPromptSubmit automaticamente quando comandante menciona "deploy"/"produção"
 
 **O que faz:**
 - Testa aplicação no browser real (Puppeteer se disponível)
@@ -99,14 +99,105 @@ Diferença chave:
 
 ---
 
-## QUANDO CADA SUB-AGENTE É OBRIGATÓRIO
+### 5. CONTRACT TESTER — Geração e Arbitragem de Testes de Contrato
+
+**Arquivo:** `.delta-11/sub-agentes/contract-tester.md`
+
+**Quando disparar (v4.0 — três cenários):**
+1. **Geração inicial (manual):** ao final da Fase 2, depois que ATLAS salvou contratos e SHIELD terminou revisão. Disparado pelo SHIELD.
+2. **Regeneração automática (via hook):** toda vez que `project-core.md` muda, o hook PostToolUse `.delta-11/hooks/regenerar-contratos.py` dispara automaticamente.
+3. **Árbitro de merge (Onda 2):** CRONOS usa os testes gerados por você como juiz objetivo quando há conflito de merge entre worktrees.
+
+**Quem dispara:** SHIELD (cenário 1) · Hook de sistema (cenário 2) · CRONOS (cenário 3 indireto via `npm run test:contracts`)
+
+**O que faz:**
+- Converte contratos de `project-core.md` em arquivos de teste executáveis em `tests/contracts/`
+- Detecta framework (Vitest, Jest, Pytest, Playwright)
+- Gera testes para happy path, validação de obrigatórios, limites de segurança, autenticação, erros de domínio
+- **Idempotente:** mesma entrada gera o mesmo output (essencial para hooks)
+
+**Output:** Relatório com número de rotas cobertas, arquivos gerados, contratos incompletos detectados
+
+**Regra de ouro:** Teste de contrato falhando = código violando o combinado. Não ignore.
+
+---
+
+### 6. SCHEMA VALIDATOR — Validação de Migrações de Banco
+
+**Arquivo:** `.delta-11/sub-agentes/schema-validator.md`
+
+**Quando disparar:** OBRIGATÓRIO antes de aplicar qualquer migração em ambiente compartilhado ou produção
+
+**Quem dispara:** VAULT
+
+**O que faz:**
+- Valida sintaxe SQL
+- Detecta migrações destrutivas sem backup
+- Verifica se índices e constraints estão consistentes com o esquema do `project-core.md`
+- Alerta sobre locks de tabela em produção
+
+**Output:** Relatório PASS/FAIL + recomendações de ajuste
+
+**Regra de ouro:** Migração é operação irreversível em produção. Sempre validar antes.
+
+---
+
+### 7. IMPACT MAPPER — Mapeamento de Impacto de Mudança de Contrato
+
+**Arquivo:** `.delta-11/sub-agentes/impact-mapper.md`
+
+**Quando disparar:** automaticamente junto com contract-tester no cenário 2 (hook PostToolUse sobre `project-core.md`)
+
+**Quem dispara:** Hook de sistema `.delta-11/hooks/regenerar-contratos.py`
+
+**O que faz:**
+- Lê o diff de `project-core.md` (via git ou backup)
+- Classifica cada mudança (rota nova, rota removida, campo alterado, tabela alterada, etc.)
+- Busca no código-fonte quais arquivos são afetados por cada mudança
+- Cruza com `kanban.md` para identificar tarefas invalidadas
+- Gera `.delta-11/memoria/impacto-mudanca-[timestamp].md` com plano de correção
+- Cria tarefas `[IMPACTO-MUDANCA]` automaticamente no kanban
+- Notifica agentes ativos via `.delta-11/ativacoes/impacto-AGENTE.txt`
+
+**Output:** Relatório resumido + arquivos persistidos
+
+**Regra de ouro:** CRONOS revisa o relatório antes de disparar qualquer correção — impact-mapper apenas mapeia, nunca corrige.
+
+---
+
+## QUANDO CADA SUB-AGENTE É OBRIGATÓRIO (v4.0)
 
 | Sub-agente | Frequência | Fase | Disparado por | Obrigatório? |
 |------------|-----------|------|---------------|--------------|
-| Build Validator | Após cada tarefa de código | Fase 4, 5 | ENGINE, BACK, FRONT, PIXEL, FORM, SCOUT | ✅ SIM |
+| Build Validator | Após cada tarefa de código | Fase 4, 5 | ENGINE, BACK, FRONT, PIXEL, FORM, SCOUT, VAULT | ✅ SIM |
 | Code Simplifier | Por tarefa (Passo 3.6) | Fase 4 | ENGINE, BACK, FRONT, PIXEL, FORM, SCOUT | ✅ SIM |
-| Code Architect | Final de fase | Final da Fase 4 | ATLAS ou CRONOS | ✅ SIM |
-| Verify App | Antes de deploy | Fase 6 | SHIELD | ✅ SIM |
+| Contract Tester — geração inicial | Final da Fase 2 | Fase 2 | SHIELD | ✅ SIM |
+| Contract Tester — regeneração | Automática sempre que `project-core.md` muda | Qualquer fase | Hook PostToolUse (sistema) | ✅ SIM — impossível falhar |
+| Contract Tester — fim de fase | Antes de transição de fase via kanban | Qualquer fase | Hook PreToolUse (sistema) | ✅ SIM — bloqueia transição |
+| Contract Tester — antes de deploy | Mensagem com "deploy"/"produção" | Fase 6 | Hook UserPromptSubmit (sistema) | ✅ SIM — bloqueia deploy |
+| Contract Tester — por tarefa | Após cada tarefa de código (Passo 3.7) | Fase 4 | Agente de código | ✅ SIM |
+| Contract Tester — ao corrigir bug | Após cada correção do SCOUT | Fase 4, 5, 6 | SCOUT | ✅ SIM |
+| Contract Tester — fim de onda | Quando CRONOS fecha uma onda | Fase 4 | CRONOS | ✅ SIM |
+| Contract Tester — árbitro merge | Durante merge de worktrees (Onda 2) | Fase 4 | CRONOS (indireto) | ✅ SIM — Onda 2 |
+| Impact Mapper | Automática sempre que `project-core.md` muda | Qualquer fase | Hook PostToolUse (sistema) | ✅ SIM — impossível falhar |
+| Code Architect | Final de fase + sob demanda | Final da Fase 4 | CRONOS | ✅ SIM |
+| Schema Validator | Antes de aplicar migração | Fase 3+ | VAULT | ✅ SIM |
+| Verify App | Antes de deploy | Fase 6 | SHIELD + Hook UserPromptSubmit | ✅ SIM |
+
+---
+
+## INTEGRAÇÃO COM WORKTREE (v4.0 Onda 2)
+
+A partir da Onda 2, cada agente de execução trabalha em uma worktree isolada. Isso afeta COMO os sub-agentes são disparados:
+
+- **build-validator, code-simplifier, contract-tester:** o agente dispara dentro da sua própria worktree, usando path relativo para arquivos de código. O resultado volta para o próprio agente. NÃO disparados por outros agentes.
+- **code-architect:** disparado pelo CRONOS a partir do repo principal. Lê código das worktrees ativas (via `git worktree list`) para ter visão consolidada. Produz relatório único cobrindo todas.
+- **impact-mapper:** disparado pelo hook PostToolUse no repo principal quando `project-core.md` muda. Como a mudança em project-core é compartilhada, o impact-mapper precisa olhar código de todas as worktrees ativas + main. Pode usar `git worktree list` para descobrir branches e `git show <branch>:<path>` para ler arquivos de worktrees irmãs.
+- **schema-validator:** disparado pelo VAULT dentro da própria worktree.
+- **verify-app:** disparado pelo SHIELD no repo principal DEPOIS do merge da onda — testa o estado consolidado.
+- **Contract Tester como árbitro de merge:** ver `.delta-11/protocolos/merge-guiado-contratos.md`. CRONOS roda os testes em versões candidatas quando há conflito, não invoca o sub-agente diretamente.
+
+**Regra geral:** sub-agentes herdam o working directory do agente que os dispara. Se o disparo acontece dentro de uma worktree, ele roda no contexto dessa worktree. Se acontece no repo principal, roda no contexto do repo principal.
 
 ---
 

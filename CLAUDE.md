@@ -69,6 +69,76 @@ Se o bloco de ativação contém a palavra "retomar" ou "retomada", significa qu
 
 ---
 
+## MUDANÇA ESTRUTURAL v4.0 — CRONOS ORQUESTRADOR EM TODO PROJETO
+
+A partir da v4.0 da Formação Δ-11:
+
+- **CRONOS entra em TODO projeto**, independente da complexidade (score 5-15). Antes era apenas em score ≥ 7; agora é sempre.
+- **CRONOS é o despachante principal** dos agentes de execução. ATLAS não dispara agentes em projeto nenhum — apenas dispara o CRONOS ao final da Fase 2 e sai de cena.
+- **Nova Fase 2.3 — Pesquisa Técnica** é executada pelo CRONOS antes do sequenciamento (Phase 2.5). CRONOS busca documentação oficial atualizada das tecnologias escolhidas pelo ATLAS e consolida em `.delta-11/memoria/pesquisa-tecnica.md`.
+- **CRONOS monta os mini-planos** de cada agente na Fase 2.5 (antes, cada agente criava seu próprio plano; agora o CRONOS faz).
+- **Score continua útil** para decidir se FRONT acumula PIXEL+FORM e se BACK acumula ENGINE+VAULT — mas nunca para decidir se CRONOS entra.
+
+Por que a mudança: em times de engenharia reais, arquiteto entrega blueprint e sai; gerente de projeto orquestra a execução. Separação de papéis limpa em todo projeto torna o Δ-11 previsível e escalável.
+
+Ver detalhes em: `.delta-11/operativos/CRONOS.md`, `.delta-11/operativos/ATLAS.md`, `.delta-11/protocolos/classificacao.md`, `.delta-11/protocolos/fluxo-zero-ao-lancamento.md`.
+
+---
+
+## MUDANÇA ESTRUTURAL v4.0 Onda 2 — ARQUITETURA DUPLA WORKTREE + KANBAN
+
+A partir da v4.0 Onda 2 da Formação Δ-11, **o AppleScript deixa de ser usado para dispatch**. Em substituição:
+
+### Dispatch via SDK nativo
+
+CRONOS dispara agentes de execução usando o `Agent tool` nativo do Claude Code com:
+- `run_in_background: true` — paralelismo real (até 3 agentes simultâneos)
+- `isolation: worktree` — cada agente nasce em uma branch Git isolada
+- `SendMessage` e `TaskOutput` para comunicação peer-to-peer e recolhimento de resultados
+
+Funciona igual em macOS, Linux e Windows, em Claude Code no terminal ou na extensão VS Code.
+
+### Arquitetura DUPLA: worktree isolado + kanban compartilhado
+
+**Princípio central da Onda 2:** worktree isola **código**; kanban permanece **compartilhado** como fonte única de coordenação.
+
+| O que fica ISOLADO na worktree do agente | O que fica COMPARTILHADO no repo principal |
+|---|---|
+| Código-fonte do projeto (`src/`, `app/`, etc.) | `.delta-11/kanban.md` + `kanban-data.js` |
+| Migrações sendo montadas | `.delta-11/memoria/project-core.md` |
+| Testes gerados localmente (antes do merge) | `.delta-11/memoria/[AGENTE]-estado.md` |
+| Arquivos de teste/debug auxiliares | `.delta-11/ativacoes/ack-*.txt` |
+| | `.delta-11/activity-log.md` |
+| | `.delta-11/.contract-hash` |
+| | `.delta-11/hooks/` (hooks Python) |
+
+**Regra de acesso obrigatória para todos os agentes de execução:**
+
+Agentes em worktree acessam os arquivos compartilhados pelo **PATH ABSOLUTO do repo principal**, nunca pelo path relativo (o path relativo abriria a cópia dentro da worktree, invisível aos outros). O CRONOS passa esse PATH ABSOLUTO no prompt de ativação.
+
+### Merge guiado pelo contract-tester
+
+No final de cada onda, CRONOS consolida todas as worktrees na branch principal. Se surgir conflito, CRONOS usa os testes de contrato como **árbitro objetivo**:
+- Versão que passa nos testes vence
+- Ambas passam ou ambas falham → escala ao comandante
+- Detalhes em `.delta-11/protocolos/merge-guiado-contratos.md`
+
+### Por que manter o kanban se tem worktree?
+
+Worktree resolve conflito de arquivos em tempo de execução. Kanban resolve **coordenação entre humanos e agentes** (painel visual, estado das tarefas, cobrança). Dois problemas distintos, duas soluções em paralelo. Remover o kanban seria perder visibilidade que você, comandante, precisa para acompanhar tudo via `painel.html`.
+
+### Bugs conhecidos da Anthropic (monitoramento)
+
+Issues públicos do Claude Code que podem afetar `isolation: worktree`:
+- #37549 — `isolation: worktree` + `team_name` pode falhar silenciosamente
+- #39886 — `isolation: worktree` pode rodar na main em vez da worktree
+
+O modelo dual **mitiga o risco**: se worktree falhar, kanban continua mostrando o estado das tarefas. CRONOS verifica periodicamente `git worktree list` e escala ao comandante se algo não bate.
+
+Ver detalhes em: `.delta-11/operativos/CRONOS.md` (seção ORQUESTRAÇÃO VIA AGENT SDK), `.delta-11/protocolos/merge-guiado-contratos.md`.
+
+---
+
 ## COMANDOS OPERACIONAIS
 
 O comandante pode enviar estes comandos curtos durante o trabalho:
@@ -239,7 +309,7 @@ Se você é um agente que escreve ou modifica código (ENGINE, BACK, FRONT, PIXE
 
 1. Mova sua tarefa para "REVISÃO" no kanban.md (não CONCLUÍDO)
 2. No kanban-data.js, adicione a tarefa no array `revisao` com o formato: `{ id: "T-XXX", desc: "Descrição", por: "SEU-NOME", revisor: "SHIELD" }`
-3. Se o SHIELD não está ativo no momento, gere um prompt de ativação em `.delta-11/ativacoes/janela-SHIELD-revisao-[ID-DA-TAREFA]-[SEU-NOME].txt` (exemplo: `janela-SHIELD-revisao-T-010-FRONT.txt`) listando os arquivos modificados e o que foi feito, e tente auto-disparar usando o mecanismo de auto-dispatch. **IMPORTANTE:** Use o ID da tarefa e seu nome no filename — se dois agentes terminam ao mesmo tempo, cada um gera seu próprio arquivo sem sobrescrever o do outro. **OBRIGATÓRIO antes de disparar:** Leia `.delta-11/.dispatch-mode` para saber o modo correto. NUNCA assuma o modo.
+3. Envie `SendMessage` ao CRONOS informando que a tarefa T-[ID] está pronta para revisão pelo SHIELD, listando os arquivos modificados e o que foi feito. **O CRONOS é quem dispara o SHIELD** (via `Agent tool` nativo) se ele não estiver ativo — você NÃO dispara o SHIELD diretamente. Para registro histórico, salve também `.delta-11/ativacoes/revisao-T-[ID]-[SEU-NOME].txt` com o conteúdo do pedido de revisão (usado para auditoria e retomada em caso de queda de sessão).
 4. Continue trabalhando na próxima tarefa — NÃO espere a revisão do SHIELD
 5. Se o SHIELD encontrar problemas, ele criará tarefas de correção no kanban
 
@@ -260,7 +330,7 @@ Se você esquecer, o hook `Stop` vai liberar automaticamente quando sua sessão 
 
 **Passo 4 — Verifique se sua tarefa desbloqueia outro agente:**
 - Olhe no kanban se alguma tarefa de outro agente tem "Depende de" apontando para a tarefa que você acabou de concluir
-- **SE SIM:** Gere o prompt de ativação desse agente, salve em `.delta-11/ativacoes/`, e **auto-dispare** usando o mecanismo de auto-dispatch (seção PROTOCOLO DE AUTO-DISPATCH). **OBRIGATÓRIO antes de disparar:** Leia `.delta-11/.dispatch-mode` para saber o modo correto (`vscode-tab`, `terminal-app`, ou `manual`). NUNCA assuma o modo — SEMPRE leia o arquivo primeiro.
+- **SE SIM:** Envie `SendMessage` para o CRONOS informando que sua tarefa desbloqueou a tarefa X do agente Y. **O CRONOS (e só ele) decide se dispara o agente desbloqueado imediatamente via `Agent tool` com `isolation: worktree`.** Você NÃO dispara o próximo agente — apenas notifica o CRONOS. Salve também o contexto em `.delta-11/ativacoes/desbloqueio-[AGENTE-Y].txt` para registro histórico.
 - **SE NÃO:** Continue normalmente
 
 **Passo 5 — Sinal visual para o comandante (OBRIGATÓRIO ao final de TODA tarefa):**
@@ -348,8 +418,9 @@ rm -f .delta-11/ativacoes/ack-[SEU-NOME].txt
    - Gere os prompts de ativação para os agentes da PRÓXIMA fase
    - Salve cada prompt como arquivo em `.delta-11/ativacoes/` (crie a pasta se não existir), com o nome `janela-[NÚMERO]-[NOME-DO-AGENTE].txt`
    - Remova arquivos de ativação da fase anterior que já foram usados
-   - **AUTO-DISPARE os agentes da próxima fase** usando o mecanismo de auto-dispatch (seção PROTOCOLO DE AUTO-DISPATCH), respeitando as regras de paralelismo e ordem de prioridade. **OBRIGATÓRIO antes de disparar:** Leia `.delta-11/.dispatch-mode` para saber o modo correto. NUNCA assuma `terminal-app` — o comandante pode estar usando a extensão VS Code.
-   - Se o auto-dispatch falhar por qualquer motivo, informe o comandante que ele pode rodar `./disparar.sh` como alternativa
+   - **(Apenas se você for o CRONOS):** dispare os agentes da próxima fase via `Agent tool` nativo (`run_in_background: true`, `isolation: worktree`) seguindo o PROTOCOLO DE DISPATCH DE AGENTES. Respeite paralelismo e ordem de prioridade.
+   - **(Se você NÃO for o CRONOS):** você nunca dispara agentes da próxima fase. Envie `SendMessage` ao CRONOS informando que concluiu seu trabalho. CRONOS orquestra a transição.
+   - Se o Agent tool nativo falhar (bug do SDK ou limitação do ambiente), consulte a seção "FALLBACK PARA AMBIENTE SEM SDK NATIVO" do PROTOCOLO DE DISPATCH DE AGENTES.
    - Atualize o campo `fase_atual` no `kanban-data.js`
 
 **REGRA CRÍTICA:** Para saber quais agentes devem ser ativados na próxima fase, consulte o arquivo `.delta-11/protocolos/fluxo-zero-ao-lancamento.md` e a tabela de agentes por complexidade no operativo do ATLAS.
@@ -380,487 +451,169 @@ Continue exatamente de onde o agente anterior parou.
 Não repita trabalho já registrado no arquivo de estado.
 ```
 
-**Passo 3 — Auto-disparo:**
-Use o mecanismo de auto-dispatch (descrito na seção PROTOCOLO DE AUTO-DISPATCH abaixo) para abrir uma nova aba do Claude Code com o prompt de retomada. **OBRIGATÓRIO:** Leia `.delta-11/.dispatch-mode` antes de disparar. O modo pode ser `vscode-tab`, `terminal-app`, ou `manual`. NUNCA assuma o modo.
+**Passo 3 — Retomada em nova sessão (v4.0):**
+Envie `SendMessage` para o CRONOS avisando que seu contexto está esgotado e que você precisa de retomada. **O CRONOS é quem dispara a nova sessão de retomada** via `Agent tool` nativo, passando o mesmo `name` (assim a worktree é reutilizada) e um prompt de retomada que inclui "retomar" + path absoluto do seu arquivo de estado.
+
+**Exceção — se VOCÊ é o CRONOS e o SEU contexto está esgotado:** avise o comandante diretamente com o prompt de retomada salvo em `.delta-11/ativacoes/retomada-CRONOS.txt`. O comandante abre a nova sessão manualmente. Só o comandante pode disparar CRONOS (porque só há um CRONOS por projeto).
 
 **Passo 4 — Avise o comandante:**
 Diga ao comandante: "Meu contexto estava chegando no limite. Já abri uma nova janela para continuar o trabalho automaticamente. Você pode fechar esta janela."
 
 ---
 
-## PROTOCOLO DE AUTO-DISPATCH (disparo automático de agentes)
+## PROTOCOLO DE DISPATCH DE AGENTES — v4.0 Onda 2 (via SDK nativo)
 
-Todo agente da Formação Δ-11 pode abrir uma nova instância do Claude Code e enviar um prompt automaticamente. Isso elimina a necessidade do comandante copiar e colar prompts manualmente.
+A partir da v4.0 Onda 2, o dispatch de agentes usa o **Agent tool nativo do Claude Code**, não mais AppleScript. Funciona igual em macOS, Linux, Windows, Claude Code no terminal ou na extensão VS Code.
 
-### DETECÇÃO DE MODO (executar UMA VEZ antes do primeiro auto-dispatch)
+### QUEM DISPARA
 
-O sistema suporta 3 modos de dispatch. O modo é detectado automaticamente e salvo em `.delta-11/.dispatch-mode`:
+- **ATLAS** dispara o **CRONOS** UMA VEZ ao final da Fase 2 (transição arquiteto → gerente de projeto)
+- **CRONOS** dispara TODOS os agentes de execução (VAULT, BACK, ENGINE, FRONT, PIXEL, FORM, SHIELD, SCOUT)
+- **Agentes de execução NUNCA disparam outros agentes por conta própria** — sempre enviam `SendMessage` para o CRONOS e ele decide o próximo passo
 
-| Modo | Quando | Como funciona |
-|------|--------|---------------|
-| **vscode-tab** | Extensão Claude Code no VS Code (padrão) | Abre nova aba no VS Code via "Open in New Tab" com targeting por título de janela |
-| **terminal-app** | CLI `claude` no Terminal (alternativa) | Abre aba no Terminal.app, roda `claude`, cola prompt |
-| **manual** | Nada detectado / fallback | Salva arquivo, pede ao comandante para colar |
+### COMO DISPARAR
 
-**DETECÇÃO AUTOMÁTICA:** `$VSCODE_PID` tem prioridade absoluta — é a realidade do ambiente atual e sobrescreve qualquer valor gravado em disco. Se `VSCODE_PID` existe, o Claude Code está rodando como extensão do VS Code → `vscode-tab` (e o arquivo é corrigido se estiver errado). A presença do CLI no PATH NÃO significa que o comandante está usando o terminal.
-
-Antes do primeiro auto-dispatch da sessão, detecte o modo:
-
-```bash
-# $VSCODE_PID é realidade — tem prioridade sobre o arquivo em disco
-if [ -n "$VSCODE_PID" ]; then
-    # Rodando dentro do VS Code (extensão) → vscode-tab, corrige o arquivo se estava errado
-    DISPATCH_MODE="vscode-tab"
-    echo "vscode-tab" > .delta-11/.dispatch-mode
-elif [ -f .delta-11/.dispatch-mode ]; then
-    # $VSCODE_PID ausente — confiar no arquivo gravado manualmente
-    DISPATCH_MODE=$(cat .delta-11/.dispatch-mode | tr -d '[:space:]')
-elif command -v claude &>/dev/null; then
-    # CLI disponível e NÃO está no VS Code → terminal-app
-    DISPATCH_MODE="terminal-app"
-    echo "terminal-app" > .delta-11/.dispatch-mode
-else
-    DISPATCH_MODE="manual"
-    echo "manual" > .delta-11/.dispatch-mode
-fi
-```
-
-### CONFIGURAÇÃO MANUAL DO MODO
-
-O comandante pode forçar um modo específico a qualquer momento:
-
-```bash
-echo "vscode-tab" > .delta-11/.dispatch-mode      # Extensão VS Code (padrão)
-echo "terminal-app" > .delta-11/.dispatch-mode   # CLI no Terminal.app (alternativa)
-echo "manual" > .delta-11/.dispatch-mode           # Sempre pedir ao comandante para colar
-rm .delta-11/.dispatch-mode                        # Resetar detecção automática
-```
-
-### O MECANISMO
-
-Para disparar UM agente:
-
-**PASSO 0 — AVISO VISUAL ANTI-COLISÃO (OBRIGATÓRIO ANTES de qualquer auto-dispatch):**
-
-ANTES de executar o AppleScript, o agente DEVE exibir o seguinte bloco ASCII art na conversa. Este aviso dá tempo ao comandante para parar de digitar/clicar e evita que o prompt caia na janela errada:
+Use a ferramenta `Agent` com estes parâmetros obrigatórios:
 
 ```
-╔═══════════════════════════════════════════════════════════════════════╗
-║                                                                       ║
-║     █████╗ ██████╗ ██████╗ ██╗███╗   ██╗██████╗  ██████╗             ║
-║    ██╔══██╗██╔══██╗██╔══██╗██║████╗  ██║██╔══██╗██╔═══██╗            ║
-║    ███████║██████╔╝██████╔╝██║██╔██╗ ██║██║  ██║██║   ██║            ║
-║    ██╔══██║██╔══██╗██╔══██╗██║██║╚██╗██║██║  ██║██║   ██║            ║
-║    ██║  ██║██████╔╝██║  ██║██║██║ ╚████║██████╔╝╚██████╔╝            ║
-║    ╚═╝  ╚═╝╚═════╝ ╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚═════╝  ╚═════╝             ║
-║                                                                       ║
-║    ███╗   ██╗ ██████╗ ██╗   ██╗ █████╗                                ║
-║    ████╗  ██║██╔═══██╗██║   ██║██╔══██╗                               ║
-║    ██╔██╗ ██║██║   ██║██║   ██║███████║                               ║
-║    ██║╚██╗██║██║   ██║╚██╗ ██╔╝██╔══██║                               ║
-║    ██║ ╚████║╚██████╔╝ ╚████╔╝ ██║  ██║                               ║
-║    ╚═╝  ╚═══╝ ╚═════╝   ╚═══╝  ╚═╝  ╚═╝                               ║
-║                                                                       ║
-║         ╦╔═╗╔╗╔╔═╗╦  ╔═╗                                             ║
-║         ║╠═╣║║║║╣ ║  ╠═╣                                             ║
-║        ╚╝╩ ╩╝╚╝╚═╝╩═╝╩ ╩                                            ║
-║                                                                       ║
-║    Disparando: [NOME-DO-AGENTE]                                       ║
-║    NAO MOVA O MOUSE. NAO DIGITE NADA.                                ║
-║    Aguarde 10 segundos...                                             ║
-║                                                                       ║
-╚═══════════════════════════════════════════════════════════════════════╝
+Agent(
+  description: "Ativação [AGENTE] — onda/fase [N]",
+  subagent_type: "general-purpose",
+  run_in_background: true,
+  isolation: "worktree",
+  name: "[agente-em-minusculo]-onda-[N]",
+  prompt: "[prompt de ativação completo — ver estrutura abaixo]"
+)
 ```
 
-Substitua `[NOME-DO-AGENTE]` pelo nome real. Exiba este bloco e AGUARDE 5 SEGUNDOS (usando `sleep 5` no bash) antes de prosseguir com o AppleScript. Isso garante que o comandante veja o aviso e pare de interagir.
+**Parâmetros explicados:**
 
-**PASSO 1 — Copiar e disparar:**
+- `run_in_background: true` — agente roda em paralelo sem bloquear quem disparou. Máximo 3 simultâneos (regra de gestão de contexto).
+- `isolation: "worktree"` — cria worktree Git isolada para o agente. Código fica isolado; kanban/project-core/estado ficam no repo principal.
+- `name` — identificador único (permite `SendMessage` direcionado e `TaskOutput` pra checar progresso).
 
-```bash
-# 0. Ler perfil do agente (especializacao real)
-AGENT_NAME="[NOME-DO-AGENTE]"  # Substituir pelo nome real
-PERFIL=".delta-11/perfis/${AGENT_NAME}.json"
-CLAUDE_CMD="claude"
-AGENT_MODEL=""
+### ESTRUTURA OBRIGATÓRIA DO PROMPT DE ATIVAÇÃO
 
-if [ -f "$PERFIL" ] && command -v jq &>/dev/null; then
-    AGENT_MODEL=$(jq -r '.model // empty' "$PERFIL")
-    MCP_CONFIG=$(jq -r '.mcp_config // empty' "$PERFIL")
+Todo prompt disparado pelo CRONOS DEVE conter:
 
-    [ -n "$AGENT_MODEL" ] && CLAUDE_CMD="$CLAUDE_CMD --model $AGENT_MODEL"
-    [ -n "$MCP_CONFIG" ] && [ -f "$MCP_CONFIG" ] && CLAUDE_CMD="$CLAUDE_CMD --mcp-config $MCP_CONFIG"
-fi
+```
+Formação Δ-11 v4.0 — Ativação de agente.
 
-# 1. Copiar o prompt do agente para o clipboard
-# Para vscode-tab: prefixar com /model se o agente tem modelo definido
-if [ -n "$AGENT_MODEL" ]; then
-    # Criar copia temporaria com /model prefixado
-    TEMP_PROMPT=$(mktemp)
-    echo "/model $AGENT_MODEL" > "$TEMP_PROMPT"
-    echo "" >> "$TEMP_PROMPT"
-    cat .delta-11/ativacoes/[ARQUIVO].txt >> "$TEMP_PROMPT"
-    cat "$TEMP_PROMPT" | pbcopy
-    rm -f "$TEMP_PROMPT"
-else
-    cat .delta-11/ativacoes/[ARQUIVO].txt | pbcopy
-fi
+Agente: [NOME]
+Onda: [N]
+Projeto (repo principal): [PATH ABSOLUTO DO REPO]
+Worktree: [path que o Agent tool criou — você está nele]
 
-# 2. Aguardar o comandante ler o aviso
-sleep 5
+REGRA CRÍTICA DE ACESSO — arquitetura dupla worktree + kanban:
 
-# 3. Ler modo de dispatch ($VSCODE_PID tem prioridade sobre o arquivo)
-if [ -n "$VSCODE_PID" ]; then
-    DISPATCH_MODE="vscode-tab"
-    echo "vscode-tab" > .delta-11/.dispatch-mode  # corrige o arquivo se estava errado
-elif [ -f .delta-11/.dispatch-mode ]; then
-    DISPATCH_MODE=$(cat .delta-11/.dispatch-mode | tr -d '[:space:]')
-else
-    DISPATCH_MODE="terminal-app"
-fi
+Arquivos COMPARTILHADOS (use PATH ABSOLUTO do repo principal):
+- kanban.md: [PATH_ABSOLUTO_REPO]/.delta-11/kanban.md
+- kanban-data.js: [PATH_ABSOLUTO_REPO]/.delta-11/kanban-data.js
+- project-core.md: [PATH_ABSOLUTO_REPO]/.delta-11/memoria/project-core.md
+- Seu estado: [PATH_ABSOLUTO_REPO]/.delta-11/memoria/[NOME]-estado.md
+- Seu ACK: [PATH_ABSOLUTO_REPO]/.delta-11/ativacoes/ack-[NOME].txt
+- Activity log: [PATH_ABSOLUTO_REPO]/.delta-11/activity-log.md
+- Seu mini-plano: [PATH_ABSOLUTO_REPO]/.delta-11/planos/[NOME]-plan.md
+- Sua Base de Conhecimento: [PATH_ABSOLUTO_REPO]/.delta-11/conhecimento/[ARQUIVO].md
 
-# 4. Pegar caminho do projeto
-PROJECT_PATH=$(pwd)
+Arquivos ISOLADOS na sua worktree (use path relativo):
+- Código da aplicação (src/, app/, migrations/, tests/, etc.)
 
-# 5. Disparar conforme o modo
-if [ "$DISPATCH_MODE" = "terminal-app" ]; then
-    # MODO TERMINAL-APP: Abre aba no Terminal.app com claude CLI
-    osascript << APPLESCRIPT
-tell application "Terminal"
-    activate
-    delay 0.5
-    tell application "System Events"
-        tell process "Terminal"
-            keystroke "t" using {command down}
-        end tell
-    end tell
-    delay 1
-    do script "cd '$PROJECT_PATH' && $CLAUDE_CMD" in front window
-    delay 6
-    tell application "System Events"
-        tell process "Terminal"
-            keystroke "v" using {command down}
-            delay 0.5
-            keystroke return
-        end tell
-    end tell
-end tell
-APPLESCRIPT
+Passos na ativação (em ordem):
+1. Leia sua Base de Conhecimento (path absoluto) — OBRIGATÓRIO antes de qualquer ação
+2. Leia seu mini-plano
+3. Leia .delta-11/memoria/pesquisa-tecnica.md (pesquisa atualizada feita pelo CRONOS)
+4. Crie seu ACK: escreva timestamp em ack-[NOME].txt
+5. Comece a primeira tarefa do mini-plano
 
-elif [ "$DISPATCH_MODE" = "vscode-tab" ]; then
-    # MODO VSCODE-TAB: Abre nova aba do Claude Code no VS Code
-    # AVISO PARA COMANDANTE: Se VS Code estiver em Space diferente (Mission Control),
-    # o macOS pode mudar de Space ao ativar. Para evitar isso:
-    # System Preferences → Mission Control → desmarcar "When switching to an application,
-    # switch to a Space with open windows for the application"
-
-    # Extrair nome da pasta do projeto para localizar a janela correta
-    PROJECT_FOLDER=$(basename "$PROJECT_PATH")
-
-    # Detectar nome do processo VS Code (pode ser "Code" ou "Electron")
-    VSCODE_PROCESS=$(osascript -e 'tell application "System Events" to get name of every process' 2>/dev/null | tr ',' '\n' | grep -o 'Code' | head -1)
-    if [ -z "$VSCODE_PROCESS" ]; then
-        VSCODE_PROCESS="Electron"
-    fi
-
-    # Detectar nome do app VS Code
-    VSCODE_APP=$(ls ~/Desktop/ /Applications/ 2>/dev/null | grep -o "Visual Studio Code[^.]*" | head -1)
-    if [ -z "$VSCODE_APP" ]; then
-        VSCODE_APP="Visual Studio Code"
-    fi
-
-    # Verificar se a janela do projeto já está aberta no VS Code
-    JANELA_ABERTA=$(osascript -e "tell application \"System Events\" to tell process \"$VSCODE_PROCESS\" to get title of windows" 2>/dev/null | tr ',' '\n' | grep -c "$PROJECT_FOLDER" 2>/dev/null || echo "0")
-
-    if [ "$JANELA_ABERTA" -eq 0 ] 2>/dev/null; then
-        # Janela não encontrada — abrir o projeto primeiro
-        code "$PROJECT_PATH" 2>/dev/null || open -a "$VSCODE_APP" "$PROJECT_PATH"
-        sleep 3
-    fi
-
-    # AppleScript com targeting por título de janela (garante a janela certa)
-    osascript << APPLESCRIPT
-set projectFolder to "$PROJECT_FOLDER"
-set vsCodeProcess to "$VSCODE_PROCESS"
-set vsCodeApp to "$VSCODE_APP"
-
--- Localizar a janela correta pelo título (evita abrir em outro projeto)
-tell application "System Events"
-    tell process vsCodeProcess
-        set targetWindow to missing value
-        repeat with w in windows
-            try
-                if title of w contains projectFolder then
-                    set targetWindow to w
-                    exit repeat
-                end if
-            end try
-        end repeat
-
-        -- Elevar a janela certa ANTES do activate (reduz troca de Space)
-        if targetWindow is not missing value then
-            perform action "AXRaise" of targetWindow
-            delay 0.3
-        end if
-    end tell
-end tell
-
--- Ativar VS Code (já deve focar a janela elevada acima)
-tell application vsCodeApp
-    activate
-end tell
-delay 1.5
-
-tell application "System Events"
-    tell process vsCodeProcess
-        keystroke "p" using {command down, shift down}
-        delay 0.8
-        keystroke "Claude Code: Open in New Tab"
-        delay 1.2
-        keystroke return
-        delay 3.5
-        keystroke "v" using {command down}
-        delay 0.5
-        keystroke return
-    end tell
-end tell
-APPLESCRIPT
-
-else
-    # MODO MANUAL: Informar o comandante
-    echo ""
-    echo "AUTO-DISPATCH INDISPONIVEL."
-    echo "O prompt foi salvo em: .delta-11/ativacoes/[ARQUIVO].txt"
-    echo "Abra um terminal, cd para o projeto, rode 'claude', e cole o conteudo."
-    echo ""
-fi
+Ao concluir todas as tarefas da onda:
+1. Rode sub-agentes obrigatórios (build-validator → code-simplifier → contract-tester)
+2. Atualize kanban.md e seu arquivo de estado (path absoluto — repo principal)
+3. Commite na branch da worktree
+4. Envie SendMessage para o CRONOS com payload estruturado (ver merge-guiado-contratos.md)
+5. NÃO faça merge sozinho — CRONOS orquestra
 ```
 
-**PASSO 2 — Registrar dispatch no estado (para verificação posterior pelo CRONOS):**
-```bash
-DISPATCH_AGENT="[NOME-DO-AGENTE-DESPACHADO]"
-DISPATCH_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-cat >> .delta-11/memoria/[MEU-NOME]-estado.md << EOF
+### COMUNICAÇÃO DE RETORNO
 
-## Dispatch pendente de verificação — $DISPATCH_TS
-- Agente despachado: $DISPATCH_AGENT
-- ACK esperado: .delta-11/ativacoes/ack-${DISPATCH_AGENT}.txt
-- Kanban esperado: tarefa em FAZENDO
-- Timeout: 10 minutos a partir de $DISPATCH_TS
-- Verificação: se ACK ausente após 10 min → reportar ao comandante
-EOF
+**Agente → CRONOS:** use `SendMessage` com payload JSON:
+
+```json
+{
+  "agente": "ENGINE",
+  "worktree": "<path da worktree>",
+  "branch": "delta-11/engine-onda-2",
+  "tarefas_concluidas": ["T-042", "T-043"],
+  "arquivos_modificados": ["src/app/api/users/route.ts"],
+  "contract_tests": "PASSED",
+  "build_validator": "PASSED",
+  "code_simplifier": "APLICADO",
+  "mensagem": "Descrição curta do que foi feito"
+}
 ```
 
-**REGRA:** Entre o disparo de dois agentes diferentes, aguarde no mínimo 8 segundos para o clipboard e o aplicativo se estabilizarem. O aviso visual DEVE ser exibido ANTES de cada disparo individual (não apenas antes do primeiro).
+**CRONOS checa status sem esperar:** `TaskOutput(name: "[nome-do-agente]")` retorna output atual.
 
-### FALLBACK — QUANDO O AUTO-DISPATCH FALHA
+**Fim da onda — merge:** CRONOS consolida todas as worktrees seguindo `.delta-11/protocolos/merge-guiado-contratos.md`, usando o contract-tester como árbitro objetivo em caso de conflito.
 
-Se o auto-dispatch falhar por qualquer motivo (aplicativo não respondeu, comando não encontrado, permissão de acessibilidade negada):
+### REGRAS DE PARALELISMO (inalteradas)
 
-1. **NÃO TENTE NOVAMENTE AUTOMATICAMENTE** — o prompt pode ter caído na janela errada
-2. **Salve o prompt como arquivo** em `.delta-11/ativacoes/` (já foi feito antes do dispatch)
-3. **Informe o comandante:**
-   ```
-   AUTO-DISPATCH FALHOU para [NOME-DO-AGENTE].
-   O prompt está salvo em: .delta-11/ativacoes/[ARQUIVO].txt
+Agentes trabalham em ZONAS. Dois agentes em zonas diferentes podem rodar em paralelo. Mesma zona = sequencial.
 
-   Opções:
-   1. Rode no terminal: ./disparar.sh [NOME-DO-AGENTE]
-   2. Abra um terminal, cd para o projeto, rode 'claude', cole o prompt
-   3. Para mudar o modo: echo "terminal-app" > .delta-11/.dispatch-mode
-   ```
-4. **Continue trabalhando** em outras tarefas se houver
-
-### QUANDO DISPARAR
-
-| Situação | O que fazer | Quem dispara |
-|----------|-------------|--------------|
-| Terminou TODAS as tarefas da fase | Gerar prompts da próxima fase + auto-disparar | O último agente a terminar na fase |
-| Contexto esgotado | Gerar prompt de retomada + auto-disparar | O próprio agente |
-| Erro que não consegue resolver (3 tentativas) | Gerar prompt de diagnóstico + auto-disparar SCOUT | Qualquer agente |
-| Erro estrutural (banco, contrato, arquitetura) | Gerar prompt + auto-disparar ATLAS | Qualquer agente |
-| Tarefa concluída que desbloqueia outra | Gerar prompt + auto-disparar o agente desbloqueado | O agente que concluiu |
-
-### ZONAS DE TRABALHO E REGRAS DE PARALELISMO
-
-Os agentes trabalham em ZONAS. Dois agentes em zonas **diferentes** podem rodar em **paralelo**. Dois agentes na **mesma** zona devem rodar em **sequência** (um após o outro).
-
-| Zona | O que inclui | Agentes típicos |
-|------|-------------|----------------|
+| Zona | Inclui | Agentes típicos |
+|------|--------|-----------------|
 | BANCO | Supabase: tabelas, RLS, functions, migrations, seeds | VAULT |
 | API | Rotas do servidor (`src/app/api/**`) | ENGINE, BACK |
-| UI-PÁGINAS | Páginas e componentes de tela (`src/app/(app)/**`, `src/app/(admin)/**`) | PIXEL |
+| UI-PÁGINAS | Páginas e componentes de tela | PIXEL |
 | UI-FORMS | Componentes de formulário e validação | FORM |
-| UI-LAYOUT | Layouts, navegação, componentes compartilhados (`src/components/**`) | FRONT |
-| CONFIG | `middleware.ts`, `src/lib/**`, `src/types/**` | Compartilhada — qualquer agente pode precisar |
-| TESTES | Arquivos de teste (`__tests__/**`, `*.test.*`) | SHIELD |
+| UI-LAYOUT | Layouts, navegação, componentes compartilhados | FRONT |
+| CONFIG | `middleware.ts`, `src/lib/**`, `src/types/**` | Compartilhada |
+| TESTES | Arquivos de teste | SHIELD |
 
-**Regras de paralelismo:**
+Regras:
+1. Zonas diferentes → PARALELO
+2. Mesma zona → SEQUENCIAL
+3. SHIELD pode rodar em paralelo com qualquer agente — só lê e testa
+4. SCOUT nunca roda em paralelo com o agente cujo código está corrigindo
 
-1. **Zonas diferentes → PARALELO.** Exemplo: PIXEL (UI-PÁGINAS) + ENGINE (API) + FORM (UI-FORMS) podem rodar ao mesmo tempo.
-2. **Mesma zona → SEQUENCIAL.** Exemplo: PIXEL e FRONT ambos mexem na UI — FRONT primeiro (layout), depois PIXEL (páginas).
-3. **Zona CONFIG é compartilhada.** Se dois agentes precisam editar o mesmo arquivo em CONFIG, o segundo DEVE ler o arquivo antes de editar (o primeiro pode ter mudado).
-4. **SHIELD pode rodar em paralelo com qualquer agente** — SHIELD só lê e testa, não modifica código de produção.
-5. **SCOUT nunca roda em paralelo com o agente cujo código está corrigindo.**
+### ORDEM DE PRIORIDADE NO DISPARO
 
-### ORDEM DE PRIORIDADE (quem disparar primeiro)
+Quando CRONOS dispara múltiplos agentes para a próxima fase:
 
-Quando precisa disparar múltiplos agentes para a próxima fase:
-
-1. **VAULT** — Sempre primeiro. Banco e dados que todos dependem.
-2. **BACK / ENGINE** — Segundo. Rotas que o frontend consome.
-3. **FRONT** — Terceiro. Estrutura de layout que PIXEL e FORM preenchem.
+1. **VAULT** — Sempre primeiro. Banco que todos dependem.
+2. **BACK / ENGINE** — Rotas que o frontend consome.
+3. **FRONT** — Estrutura de layout que PIXEL e FORM preenchem.
 4. **PIXEL + FORM** — Podem ser paralelos entre si (zonas diferentes).
 5. **SHIELD** — Pode iniciar a qualquer momento para testar o que já está pronto.
 6. **SCOUT** — Sob demanda quando erro é detectado.
-7. **ATLAS** — Só quando erro estrutural exige mudança de contrato.
+7. **ATLAS** — Só reativa quando erro estrutural exige mudança de contrato.
 
-**Exemplo prático de disparo da Fase 3 → Fase 4:**
-```
-VAULT termina Fase 3 (banco pronto)
-  → Dispara ENGINE + FRONT em paralelo (zonas diferentes: API + UI-LAYOUT)
-  → Aguarda 8s entre cada disparo
-  → NÃO dispara PIXEL e FORM ainda (dependem do FRONT ter criado os layouts)
-  → No prompt do FRONT, inclui: "Ao concluir, dispare PIXEL e FORM em paralelo"
-```
+### DISPATCH DE ERROS
 
-### AUTO-DISPATCH DE ERROS
+Quando um agente encontra erro que não consegue resolver após 3 tentativas:
 
-Quando um agente encontra um erro que NÃO consegue resolver após 3 tentativas:
+1. **Categoria A (visual):** tenta resolver ou escala para FRONT/PIXEL via SendMessage ao CRONOS
+2. **Categoria B (dados):** escala para SCOUT via SendMessage ao CRONOS
+3. **Categoria C (estrutural — banco, contrato, arquitetura):** escala para ATLAS via SendMessage ao CRONOS
 
-**Passo 1 — Classifique o erro:**
-- **Categoria A (apenas visual):** Tente resolver você mesmo ou escale para o agente da zona (FRONT/PIXEL). NÃO precisa de SCOUT.
-- **Categoria B (envolve dados):** Escale para SCOUT.
-- **Categoria C (estrutural — banco, contrato, arquitetura):** Escale para ATLAS.
+Em todos os casos, o agente NÃO dispara o agente de resgate por conta própria — envia SendMessage ao CRONOS descrevendo o erro. CRONOS decide quem disparar e com qual prompt.
 
-**Passo 2 — Crie o arquivo de ativação:**
-Salve em `.delta-11/ativacoes/erro-[AGENTE-DESTINO].txt`:
-```
-Formação Δ-11. Ativação de agente.
-Agente: [SCOUT ou ATLAS]
-Fase: [FASE ATUAL]
-Missão: Diagnosticar e corrigir erro reportado por [SEU-NOME]
+### FALLBACK PARA AMBIENTE SEM SDK NATIVO
 
-ERRO:
-- Descrição: [o que deveria acontecer vs o que está acontecendo]
-- Arquivo(s): [caminhos dos arquivos envolvidos]
-- Tentativas: [o que já foi tentado e por que não funcionou]
-- Categoria: [A / B / C]
+Se por qualquer motivo o Agent tool nativo não estiver disponível (versão antiga de Claude Code, erro de permissão, bug do SDK), o CRONOS tem dois fallbacks em ordem:
 
-Leia seus arquivos de identidade, projeto, estado e kanban.
-Diagnostique e corrija o erro acima.
-```
+1. **Fallback 1 — Mensagem ao comandante:** gera prompt de ativação completo em `.delta-11/ativacoes/janela-[AGENTE].txt` e pede ao comandante que abra nova janela manualmente e cole. Fluxo manual mas sempre funciona.
+2. **Fallback 2 — Script `./disparar.sh` legado:** se o projeto ainda tem o `disparar.sh` do modelo antigo (AppleScript), pode ser usado como último recurso em macOS. Não recomendado em produção; apenas para compatibilidade temporária.
 
-**Passo 3 — Dispare o agente** usando o mecanismo de auto-dispatch acima. **OBRIGATÓRIO:** Leia `.delta-11/.dispatch-mode` antes de disparar.
-
-**Passo 4 — Continue trabalhando** em outras tarefas se houver. Não fique parado esperando.
+**Nunca use AppleScript direto via `osascript` nos operativos — essa era a abordagem da v3.x, removida na v4.0 Onda 2.**
 
 ### CUIDADOS OBRIGATÓRIOS
 
-- **Nunca dispare dois agentes que editam o mesmo arquivo ao mesmo tempo**
-- **Nunca dispare SCOUT para erros que você mesmo pode resolver** (tente 3 vezes antes)
-- **SCOUT nunca dispara SCOUT** — se não resolveu em 3 tentativas, informa o comandante
-- **Sempre atualize o kanban ANTES de disparar** (para o próximo agente ver o estado correto)
-- **Sempre aguarde 8 segundos entre disparos** de agentes diferentes
-- **Sempre salve o prompt como arquivo em `.delta-11/ativacoes/`** antes de disparar (para registro)
-
-### SEGURANÇA DO VSCODE-TAB: TARGETING POR TÍTULO DE JANELA
-
-O modo `vscode-tab` é SEGURO quando usa targeting por título de janela. O AppleScript DEVE:
-
-1. Extrair o nome da pasta do projeto (`PROJECT_FOLDER`)
-2. Listar TODAS as janelas abertas do VS Code
-3. Encontrar a janela cujo título contém o nome do projeto
-4. Usar `AXRaise` para elevar aquela janela específica ANTES de ativar
-5. Só então enviar keystrokes (`Cmd+Shift+P → Claude Code: Open in New Tab → Cmd+V`)
-6. Se a janela do projeto NÃO está aberta, abrir com `code $PROJECT_PATH` primeiro
-
-**REGRA: Cross-project com vscode-tab é PROIBIDO.** Se o working directory do agente ≠ projeto-alvo, usar `terminal-app` (cd garante contexto correto).
-
-**O AppleScript correto para vscode-tab (dentro do mesmo projeto):**
-
-**IMPORTANTE — Detecção do nome do processo VS Code:**
-O VS Code pode rodar como processos diferentes dependendo da instalação:
-- Instalação padrão: processo `"Code"`, app `"Visual Studio Code"`
-- Instalação customizada (ex: "Visual Studio Code 2.app"): processo `"Electron"`, app `"Visual Studio Code 2"`
-
-O script DEVE detectar o nome correto automaticamente antes de usar:
-
-```bash
-# Extrair nome da pasta do projeto para localizar a janela correta
-PROJECT_FOLDER=$(basename "$PROJECT_PATH")
-
-# Detectar nome do processo VS Code (pode ser "Code" ou "Electron")
-VSCODE_PROCESS=$(osascript -e 'tell application "System Events" to get name of every process' 2>/dev/null | tr ',' '\n' | grep -o 'Code' | head -1)
-if [ -z "$VSCODE_PROCESS" ]; then
-    # Se não encontrou "Code", verificar se é "Electron" com janelas de VS Code
-    VSCODE_PROCESS="Electron"
-fi
-
-# Detectar nome do app VS Code (pode ser "Visual Studio Code" ou "Visual Studio Code 2")
-VSCODE_APP=$(ls ~/Desktop/ /Applications/ 2>/dev/null | grep -o "Visual Studio Code[^.]*" | head -1)
-if [ -z "$VSCODE_APP" ]; then
-    VSCODE_APP="Visual Studio Code"
-fi
-
-# Verificar se a janela do projeto já está aberta no VS Code
-JANELA_ABERTA=$(osascript -e "tell application \"System Events\" to tell process \"$VSCODE_PROCESS\" to get title of windows" 2>/dev/null | tr ',' '\n' | grep -c "$PROJECT_FOLDER" 2>/dev/null || echo "0")
-
-if [ "$JANELA_ABERTA" -eq 0 ] 2>/dev/null; then
-    # Janela não encontrada — abrir o projeto primeiro
-    code "$PROJECT_PATH" 2>/dev/null || open -a "$VSCODE_APP" "$PROJECT_PATH"
-    sleep 3
-fi
-
-# AppleScript com targeting por título de janela (garante a janela certa)
-osascript << APPLESCRIPT
-set projectFolder to "$PROJECT_FOLDER"
-set vsCodeProcess to "$VSCODE_PROCESS"
-set vsCodeApp to "$VSCODE_APP"
-
--- Localizar a janela correta pelo título (evita abrir em outro projeto)
-tell application "System Events"
-    tell process vsCodeProcess
-        set targetWindow to missing value
-        repeat with w in windows
-            try
-                if title of w contains projectFolder then
-                    set targetWindow to w
-                    exit repeat
-                end if
-            end try
-        end repeat
-
-        -- Elevar a janela certa ANTES do activate (reduz troca de Space)
-        if targetWindow is not missing value then
-            perform action "AXRaise" of targetWindow
-            delay 0.3
-        end if
-    end tell
-end tell
-
--- Ativar VS Code (já deve focar a janela elevada acima)
-tell application vsCodeApp
-    activate
-end tell
-delay 1.5
-
-tell application "System Events"
-    tell process vsCodeProcess
-        keystroke "p" using {command down, shift down}
-        delay 0.8
-        keystroke "Claude Code: Open in New Tab"
-        delay 1.2
-        keystroke return
-        delay 3.5
-        keystroke "v" using {command down}
-        delay 0.5
-        keystroke return
-    end tell
-end tell
-APPLESCRIPT
-```
-
----
+- Nunca dispare dois agentes que editam o mesmo arquivo ao mesmo tempo (worktree resolve isso automaticamente se configurado corretamente)
+- Nunca dispare SCOUT para erros que você mesmo pode resolver (tente 3 vezes antes)
+- SCOUT nunca dispara SCOUT — se não resolveu, escala ao comandante via SendMessage ao CRONOS
+- Sempre atualize o kanban ANTES de disparar (para o próximo agente ver o estado correto)
+- Sempre verifique que o Agent tool aceita os parâmetros (alguns ambientes podem limitar `isolation: worktree` — ver bugs #37549 e #39886 da Anthropic)
 
 ## ESTRUTURA DO SISTEMA
 

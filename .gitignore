@@ -31,3 +31,9 @@ node_modules/
 .env
 .env.local
 credentials.json
+
+# Estado runtime local (nao propagar)
+.delta-11/monitor-status.json
+
+# Config MCP local (paths especificos da maquina)
+.mcp.json

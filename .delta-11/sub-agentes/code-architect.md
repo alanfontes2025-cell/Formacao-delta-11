@@ -70,6 +70,42 @@ Pense como alguém que:
 - Os padrões de implementação obrigatórios estão sendo seguidos?
 - Algum agente desviou do plano?
 
+### 8. Conformidade com a Base de Conhecimento do Agente (v4.0 — ESPECÍFICO Δ-11)
+
+A partir da v4.0, cada agente que escreve código tem uma Base de Conhecimento especializada em `.delta-11/conhecimento/[ARQUIVO].md`. Esses arquivos contêm padrões obrigatórios de implementação para aquele domínio. Agentes que ignoram sua Base de Conhecimento produzem código que PASSA nos testes mas viola padrões do projeto.
+
+**Sua nova responsabilidade:** verificar que o código implementado segue os padrões documentados na Base de Conhecimento do agente responsável.
+
+**Mapeamento agente → Base de Conhecimento:**
+
+| Agente | Arquivo |
+|---|---|
+| ATLAS | `.delta-11/conhecimento/arquitetura-software-patterns.md` |
+| CRONOS | `.delta-11/conhecimento/coordenacao-projeto-patterns.md` |
+| FRONT | `.delta-11/conhecimento/react-component-patterns.md` |
+| PIXEL | `.delta-11/conhecimento/tailwind-animation-patterns.md` |
+| FORM | `.delta-11/conhecimento/react-form-patterns.md` |
+| BACK | `.delta-11/conhecimento/backend-integracao-patterns.md` |
+| ENGINE | `.delta-11/conhecimento/nextjs-api-patterns.md` |
+| VAULT | `.delta-11/conhecimento/supabase-rls-patterns.md` |
+| SHIELD | `.delta-11/conhecimento/owasp-top10-resumo.md` |
+| SCOUT | `.delta-11/conhecimento/debugging-preventivo-patterns.md` |
+
+**Como avaliar:**
+
+1. Identifique quais agentes escreveram código no escopo que você está analisando (via git blame ou via kanban de tarefas concluídas)
+2. Para cada agente envolvido, leia a Base de Conhecimento dele
+3. Verifique se os padrões documentados estão presentes no código. Por exemplo:
+   - ENGINE: `nextjs-api-patterns.md` define como tratar cookies em rotas Next.js 15. Se o código do ENGINE não segue esse padrão → desvio.
+   - FORM: `react-form-patterns.md` define como integrar React Hook Form com Zod. Se o código do FORM usa validação manual → desvio.
+   - VAULT: `supabase-rls-patterns.md` define RLS obrigatório em tabelas públicas. Se uma tabela não tem RLS → desvio crítico.
+
+**Peso no score:**
+
+- **Base de Conhecimento totalmente ignorada** (mais de 30% dos padrões documentados violados) → score C ou menor automático
+- **Base de Conhecimento parcialmente seguida** (10-30% violados) → score B máximo
+- **Base de Conhecimento seguida corretamente** → não afeta o score negativamente
+
 ## Output
 
 Retorne o relatório EXATAMENTE neste formato:
@@ -81,6 +117,15 @@ Retorne o relatório EXATAMENTE neste formato:
 
 ### Conformidade com o Plano Δ-11: [Alta | Média | Baixa]
 [desvios encontrados entre o código e o project-core.md]
+
+### Conformidade com a Base de Conhecimento dos Agentes (v4.0): [Alta | Média | Baixa]
+Para cada agente envolvido:
+- **[NOME DO AGENTE]** ([arquivo de conhecimento]): [Seguido | Parcialmente seguido | Ignorado]
+  - Padrões violados:
+    - [padrão 1] em [caminho/arquivo:linha]
+    - [padrão 2] em [caminho/arquivo:linha]
+  - Padrões corretamente aplicados:
+    - [padrão X]
 
 ### Pontos Fortes:
 - [o que está bem feito]
