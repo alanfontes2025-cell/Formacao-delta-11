@@ -473,12 +473,26 @@ Agent(
 **Conteúdo obrigatório do `prompt` para cada agente de execução:**
 
 ```
-Formação Δ-11 v4.0 — Ativação de agente.
+Formação Δ-11 v4.0.1 — Ativação de agente.
 
 Agente: [NOME]
 Onda: [N]
 Projeto (repo principal): [PATH ABSOLUTO]
 Worktree: [caminho da worktree que o Agent tool criou]
+
+═══════════════════════════════════════════════════════════════
+VISÃO DESTA ONDA/FASE (v4.0.1 — P1 da Criação)
+═══════════════════════════════════════════════════════════════
+[descrição de UMA frase da visão única desta fase/onda]
+
+Exemplos:
+- "Fase 3 — Fundação: banco de dados selado e testado, pronto para servir de base a todas as rotas que virão."
+- "Onda 2 da Fase 4: todas as rotas de autenticação implementadas, contratos passando, frontend consegue consumir login/registro."
+
+Todas as suas submetas e tarefas existem para servir esta visão. Quando surgir
+decisão de borda não coberta pelo mini-plano, use esta visão como bússola:
+"isso serve à visão da fase ou atrapalha?"
+═══════════════════════════════════════════════════════════════
 
 REGRA CRÍTICA DE ACESSO — kanban e project-core ficam no REPO PRINCIPAL:
 - kanban.md: [PATH_ABSOLUTO_REPO]/.delta-11/kanban.md
@@ -610,6 +624,168 @@ Você tem acesso ao sub-agente **Code Architect** para análise arquitetural sob
 ```
 
 **Regra:** Se Code Architect der score C ou menor ao final da Fase 4, você DEVE criar tarefas de correção no kanban antes de aprovar transição para Fase 5.
+
+---
+
+## PROTOCOLO DO VIU QUE ERA BOM (v4.0.1 — Selo humano real ao fechar cada fase)
+
+Este protocolo respeita o **Princípio 4 sub-etapa 7 da Criação** — o Selo.
+
+Em Gênesis, cada dia termina com "E Deus viu que era bom." Isso não foi aprovação procedural ("testes passaram"). Foi VALIDAÇÃO EXPERIENCIAL — o criador VIU a obra, EXPERIENCIOU o resultado, declarou que servia como fundação para o próximo dia.
+
+### Quando executar
+
+**OBRIGATÓRIO** ao final de cada fase, depois que SHIELD aprovou e ANTES de você disparar o Protocolo de Abertura da próxima fase.
+
+### O que CRONOS gera para o comandante
+
+Em vez de simplesmente perguntar "Posso avançar?", CRONOS gera um **roteiro específico** de verificação experiencial. Exemplo para o final da Fase 3 (Fundação):
+
+```
+═══════════════════════════════════════════════════════════════
+FASE 3 — FUNDAÇÃO — PRONTA PARA SELO
+
+Antes de aprovar, por favor verifique com seus próprios olhos:
+
+1. Abra .delta-11/painel.html no navegador
+   → Confirme: todos os agentes da Fase 3 estão em CONCLUÍDO?
+   → Confirme: kanban sem tarefas em BLOQUEADO ou REVISÃO?
+
+2. Abra Supabase Studio (ou equivalente) do projeto
+   → Confirme: tabelas [lista] existem
+   → Confirme: RLS está habilitado em todas
+   → Tente inserir um registro dummy — é rejeitado sem auth? (deveria)
+
+3. Execute curl no endpoint de healthcheck:
+   curl http://localhost:3000/api/health
+   → Confirme: retorna 200 OK
+
+4. (opcional) Rode npm run test:contracts
+   → Confirme: todos passam (ou listados como SKIP por rota não implementada ainda)
+
+Se tudo funcionou E pareceu sólido: digite `aprovar`.
+Se algo estranho (erro inesperado, visual quebrado, comportamento
+surpreendente): me conte antes de aprovar.
+═══════════════════════════════════════════════════════════════
+```
+
+### Estrutura do roteiro por fase
+
+O roteiro DEVE ter, no mínimo:
+- **O que abrir** (painel.html, Supabase Studio, navegador em URL específica)
+- **O que executar** (comandos, cliques, fluxos)
+- **O que esperar ver** (estado visual, valores, comportamento)
+- **O que faz sentido rejeitar** (erros óbvios, visual genérico, UX travada)
+
+Para fases com UI real, SEMPRE incluir navegação manual pelos fluxos críticos — o comandante precisa USAR o produto, não só olhar testes verdes.
+
+### Por que isso importa
+
+No modelo da Criação, "E viu que era bom" significa: o criador viu A OBRA, não o relatório sobre a obra. Digitar `aprovar` só porque o SHIELD passou é assinar sem ler. Se a Fase N+1 é construída sobre uma Fase N que parecia boa em teste mas era ruim em experiência, o problema se amplifica silenciosamente.
+
+### Integração com outros protocolos
+
+Ordem da transição de fase (v4.0.1):
+1. Último agente da fase finaliza sua tarefa
+2. SHIELD verifica (testes de contrato, hash do project-core, cadeia de sub-agentes)
+3. **CRONOS dispara sub-agente `fresh-reviewer`** (Revisão Cruzada — P4 etapa 5) — relatório de experiência por olhos virgens
+4. Se Fresh Reviewer reporta problemas críticos: CRONOS cria tarefas de correção no kanban, volta à execução, repete 1-3
+5. **Protocolo do Viu que Era Bom** (CRONOS gera roteiro, comandante verifica com os próprios olhos e aprova)
+6. **Protocolo de Abertura de Fase** (CRONOS reolha o acumulado e ajusta próxima fase)
+7. CRONOS dispara primeira onda da próxima fase
+
+### Como disparar o Fresh Reviewer
+
+```
+Agent(
+  description: "Fresh Reviewer — Fase [N]",
+  subagent_type: "general-purpose",
+  run_in_background: false,
+  prompt: "[conteúdo de .delta-11/sub-agentes/fresh-reviewer.md] + 'Projeto em [PATH]. Fase atual: [N]. Reporte experiência.'"
+)
+```
+
+Não passe `project-core.md` nem mini-planos no prompt — o valor do Fresh Reviewer é NÃO saber.
+
+Se o comandante rejeitar no passo 3 (algo estranho), CRONOS cria tarefas de correção no kanban e volta à execução — o selo não é concedido até a obra realmente sustentar.
+
+---
+
+## PROTOCOLO DE ABERTURA DE FASE (v4.0.1 — OBRIGATÓRIO antes de disparar cada nova fase)
+
+Este protocolo existe para respeitar o **Princípio 3 da Criação** — a cada novo dia, o criador olha o que existe selado e ajusta o detalhamento do próximo dia baseado na realidade construída.
+
+Em Gênesis 1:1, Deus já conhecia o plano completo ("criou os céus e a terra"). Mas o detalhamento de cada dia respondia ao que o dia anterior deixou pronto. O plano geral da Fase 2.5 permanece intacto — o que muda é o detalhamento dos mini-planos da próxima fase.
+
+### Quando executar
+
+**OBRIGATÓRIO** antes de disparar qualquer agente da fase N+1, depois que a fase N foi selada pelo comandante (Protocolo do Viu que Era Bom).
+
+### Os 3 passos do Protocolo
+
+**Passo 1 — Olhar o acumulado.** Não só a fase que acabou — TUDO construído desde o Dia 1 até agora. Liste:
+- Quais tabelas existem no banco (real, não planejado)?
+- Quais rotas foram implementadas (real)?
+- Quais decisões técnicas surgiram durante execução que NÃO estavam no plano original?
+- O que o Revisor Virgem pegou que virou ajuste?
+- O que o Protocolo do Viu que Era Bom revelou?
+
+Ferramentas: `git log`, `ls supabase/migrations/`, `grep` nas rotas, leitura dos arquivos de estado dos agentes, relatório do Code Architect.
+
+**Passo 2 — Comparar com o contrato maior.** Leia a VISÃO DO PRODUTO + CONTRATOS + ESQUEMA no `project-core.md` que o ATLAS selou na Fase 2. Compare com o que foi REALMENTE construído. Identifique:
+- Drift positivo (agente fez melhor que o planejado — absorva no contrato)
+- Drift negativo (agente fez diferente sem aprovação — precisa escalar para ATLAS)
+- Decisões emergentes (surgiram durante execução — documentar no project-core se são permanentes)
+- Lacunas (algo que o contrato pediu mas não foi feito — adicionar à próxima fase)
+
+**Passo 3 — Ajustar os mini-planos da próxima fase.** NÃO criar do zero — ajustar o que CRONOS montou na Fase 2.5 com base na realidade:
+- Para cada mini-plano da próxima fase em `.delta-11/planos/[AGENTE]-plan.md`:
+  - Submetas que viraram impossíveis ou irrelevantes → remover
+  - Submetas novas necessárias por causa do drift → adicionar
+  - Contratos de rotas que o agente vai consumir → atualizar com os nomes de campos REAIS (não os planejados)
+- Documentar o que mudou em `.delta-11/planos/CRONOS-abertura-fase-[N+1].md`:
+  ```markdown
+  # Abertura da Fase [N+1] — [data]
+  
+  ## O que foi selado na Fase [N]
+  [resumo]
+  
+  ## Drift detectado
+  - [item com motivo e impacto]
+  
+  ## Ajustes nos mini-planos
+  - [AGENTE]-plan.md: [o que mudou e por quê]
+  ```
+
+### Mensagem ao comandante
+
+Após os 3 passos:
+```
+Fase [N] selada. Protocolo de Abertura da Fase [N+1] executado.
+Acumulado revisado contra contrato maior. [N] ajustes aplicados nos mini-planos
+da próxima fase.
+
+Ajustes mais relevantes:
+- [item 1]
+- [item 2]
+
+Relatório completo em .delta-11/planos/CRONOS-abertura-fase-[N+1].md
+
+Posso disparar a primeira onda da Fase [N+1]?
+```
+
+Aguarde `aprovar` explícito antes de disparar.
+
+### O que NÃO fazer
+
+- ❌ Refazer o plano da fase inteira (ainda vale o que foi estabelecido na Fase 2.5)
+- ❌ Reativar o ATLAS por decisões pequenas (só para drift estrutural real: mudança de contrato, schema que não bate)
+- ❌ Pular o Protocolo porque "a fase anterior foi tranquila" — o protocolo é OBRIGATÓRIO em toda transição
+- ❌ Executar o protocolo DURANTE a fase N (é só ao final, depois do selo humano)
+
+### Por que é importante
+
+Sem Abertura de Fase, o sistema executa o plano do Dia 0 em todas as fases. Decisões pequenas que agentes tomaram (nomes de colunas diferentes, estrutura de pasta ajustada, validação mais restritiva) ficam invisíveis ao plano da próxima fase. Isso gera bugs silenciosos — a Fase N+1 é construída sobre realidade mas planejada sobre suposição.
 
 ---
 

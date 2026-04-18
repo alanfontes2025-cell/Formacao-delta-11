@@ -547,12 +547,21 @@ Agent(
 Todo prompt disparado pelo CRONOS DEVE conter:
 
 ```
-Formação Δ-11 v4.0 — Ativação de agente.
+Formação Δ-11 v4.0.1 — Ativação de agente.
 
 Agente: [NOME]
 Onda: [N]
 Projeto (repo principal): [PATH ABSOLUTO DO REPO]
 Worktree: [path que o Agent tool criou — você está nele]
+
+═══════════════════════════════════════════════════════════════
+VISÃO DESTA ONDA/FASE (v4.0.1 — P1 da Criação)
+═══════════════════════════════════════════════════════════════
+[descrição de UMA frase da visão única desta fase/onda — CRONOS preenche]
+
+Todas as suas submetas e tarefas existem para servir esta visão. Quando surgir
+decisão de borda não coberta pelo mini-plano, use a visão como bússola.
+═══════════════════════════════════════════════════════════════
 
 REGRA CRÍTICA DE ACESSO — arquitetura dupla worktree + kanban:
 

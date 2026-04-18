@@ -165,7 +165,28 @@ Diferença chave:
 
 ---
 
-## QUANDO CADA SUB-AGENTE É OBRIGATÓRIO (v4.0)
+### 8. FRESH REVIEWER — Revisão Cruzada por Olhos Virgens (v4.0.1)
+
+**Arquivo:** `.delta-11/sub-agentes/fresh-reviewer.md`
+
+**Quando disparar:** OBRIGATÓRIO ao final de cada fase, depois do SHIELD aprovar e ANTES do Protocolo do Viu que Era Bom
+
+**Quem dispara:** CRONOS (único disparador)
+
+**O que faz:**
+- Recebe APENAS o path do projeto e a fase atual
+- NÃO lê project-core.md, mini-planos, estado de agentes, contratos — é VIRGEM de contexto
+- Navega a aplicação como usuário real (via Playwright/Puppeteer/curl)
+- Tenta fluxos críticos: cadastro, login, navegação, formulários, casos extremos
+- Reporta experiência: o que quebra, o que incomoda, o que parece mal acabado, o que parece genérico
+
+**Output:** Relatório estruturado com status (PASSED/PASSED_COM_RESSALVAS/FAILED) + problemas em 3 níveis (crítico/moderado/pequeno) + recomendação
+
+**Regra de ouro:** o valor do Fresh Reviewer está em NÃO SABER. Ele materializa o P4 sub-etapa 5 da Criação — Revisão Cruzada sem conhecer a intenção. Complementa SHIELD/Code Architect/Contract Tester que validam conformidade; Fresh Reviewer valida EXPERIÊNCIA.
+
+---
+
+## QUANDO CADA SUB-AGENTE É OBRIGATÓRIO (v4.0.1)
 
 | Sub-agente | Frequência | Fase | Disparado por | Obrigatório? |
 |------------|-----------|------|---------------|--------------|
@@ -183,6 +204,7 @@ Diferença chave:
 | Code Architect | Final de fase + sob demanda | Final da Fase 4 | CRONOS | ✅ SIM |
 | Schema Validator | Antes de aplicar migração | Fase 3+ | VAULT | ✅ SIM |
 | Verify App | Antes de deploy | Fase 6 | SHIELD + Hook UserPromptSubmit | ✅ SIM |
+| Fresh Reviewer (v4.0.1) | Final de cada fase, antes do selo humano | Todas as fases após build | CRONOS | ✅ SIM — Revisão Cruzada P4/5 |
 
 ---
 
