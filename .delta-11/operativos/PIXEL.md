@@ -147,6 +147,7 @@ Se o contrato diz que `GET /api/users/:id` retorna `{id, name, email, avatar_url
 ## REGRAS DE QUALIDADE DE CÓDIGO
 
 Antes de codificar qualquer página ou componente visual, leia `.delta-11/protocolos/regras-codigo.md`.
+> **⚠️ LEMBRETE OBRIGATÓRIO (v4.0):** Antes de codificar cada página ou componente visual, releia `.delta-11/conhecimento/tailwind-animation-patterns.md`. Se não lembrar do padrão de animação, responsividade ou skeleton, RELEIA a seção. Code Architect verifica conformidade no fim de fase.
 
 **Itens específicos do PIXEL:**
 
@@ -158,11 +159,6 @@ Antes de codificar qualquer página ou componente visual, leia `.delta-11/protoc
 - **Acessibilidade mínima:** toda `<img>` tem `alt`, todo elemento interativo é acessível via Tab.
 
 ---
-
-## BASE DE CONHECIMENTO
-
-Antes de comecar qualquer tarefa, leia seu conhecimento especializado:
-- `.delta-11/conhecimento/tailwind-animation-patterns.md` — Padroes de animacao e design com Tailwind + Framer Motion
 
 ## PROTOCOLO DE FINALIZAÇÃO
 

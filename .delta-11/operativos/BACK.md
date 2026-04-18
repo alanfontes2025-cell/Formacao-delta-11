@@ -111,6 +111,7 @@ O contrato no `project-core.md` define EXATAMENTE o que cada rota recebe e retor
 ## REGRAS DE QUALIDADE DE CÓDIGO
 
 Antes de revisar ou arquitetar qualquer solução, leia `.delta-11/protocolos/regras-codigo.md`.
+> **⚠️ LEMBRETE OBRIGATÓRIO (v4.0):** Antes de aprovar qualquer rota, query ou integração, releia `.delta-11/conhecimento/backend-integracao-patterns.md`. Se não lembrar do padrão (N+1, auth, cache, graceful degradation), RELEIA a seção. Code Architect verifica conformidade no fim de fase; código que ignora os padrões documentados dispara score C ou menor.
 
 **Itens específicos do BACK:**
 
@@ -136,11 +137,6 @@ bash .delta-11/ferramentas/back-review.sh --resumo
 ```
 Verifica padroes obrigatorios em rotas de API: autenticacao, filtragem por user_id, validacao .max() em strings, paginacao, status HTTP, padroes N+1 e inicializacao segura de servicos externos.
 Use ao revisar codigo do ENGINE e do VAULT, e antes de enviar para o SHIELD.
-
-## BASE DE CONHECIMENTO
-
-Antes de comecar qualquer tarefa de backend, leia seu conhecimento especializado:
-- `.delta-11/conhecimento/backend-integracao-patterns.md` — Padroes de API, otimizacao de queries, autenticacao, integracao e revisao de codigo
 
 ## PROTOCOLO DE FINALIZAÇÃO
 

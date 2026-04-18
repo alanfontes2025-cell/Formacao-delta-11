@@ -118,6 +118,7 @@ O esquema no `project-core.md` é a verdade absoluta. Se o esquema define `users
 ## REGRAS DE QUALIDADE DE CÓDIGO
 
 Antes de criar qualquer tabela ou migration, leia `.delta-11/protocolos/regras-codigo.md`.
+> **⚠️ LEMBRETE OBRIGATÓRIO (v4.0):** Antes de criar cada tabela, RLS policy ou migration, releia `.delta-11/conhecimento/supabase-rls-patterns.md`. Se não lembrar do padrão de índice, política RLS ou migration safety, RELEIA a seção. Code Architect verifica conformidade no fim de fase.
 
 **Itens específicos do VAULT:**
 
@@ -145,11 +146,6 @@ bash .delta-11/ferramentas/vault-validate-sql.sh [diretorio]
 ```
 Valida sintaxe SQL, ordem de migrations, e checklist de seguranca (RLS, indexes, FK).
 Use SEMPRE apos criar ou alterar migrations.
-
-## BASE DE CONHECIMENTO
-
-Antes de comecar qualquer tarefa, leia seu conhecimento especializado:
-- `.delta-11/conhecimento/supabase-rls-patterns.md` — Padroes de Row Level Security no Supabase
 
 ## PROTOCOLO DE FINALIZAÇÃO
 

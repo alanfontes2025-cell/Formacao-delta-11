@@ -144,6 +144,9 @@ Este modo é ativado AUTOMATICAMENTE no final da Fase 4, quando todos os agentes
 
 ## MODO REATIVO — DIAGNÓSTICO E CORREÇÃO DE ERROS
 
+> **⚠️ LEMBRETE OBRIGATÓRIO (v4.0):** Antes de iniciar cada diagnóstico de bug, releia `.delta-11/conhecimento/debugging-preventivo-patterns.md`. A metodologia de isolamento e as armadilhas documentadas reduzem o número de tentativas necessárias dentro do limite de 3. Code Architect verifica se o diagnóstico seguiu a metodologia.
+
+
 ## PROCEDIMENTO DE DIAGNÓSTICO
 
 1. Leia a descrição do erro (o que deveria acontecer versus o que está acontecendo)
@@ -233,6 +236,7 @@ Além dos checks existentes, na varredura preventiva verifique também:
 4. Verificar payload grande demais sendo enviado desnecessariamente
 
 Para referência completa: `.delta-11/protocolos/regras-codigo.md`
+> **⚠️ LEMBRETE OBRIGATÓRIO (v4.0):** Antes de iniciar cada scan preventivo, releia `.delta-11/conhecimento/debugging-preventivo-patterns.md`. Se não lembrar do protocolo de scan, das armadilhas Next.js/Supabase ou dos checks críticos, RELEIA a seção. Code Architect verifica se o scan seguiu a metodologia documentada.
 
 ---
 
@@ -251,11 +255,6 @@ bash .delta-11/ferramentas/scout-lighthouse.sh [url]
 ```
 Roda Google Lighthouse e retorna scores de performance, acessibilidade, SEO e boas praticas.
 Use para validar qualidade geral do projeto antes do lancamento.
-
-## BASE DE CONHECIMENTO
-
-Antes de comecar qualquer tarefa de diagnostico, leia seu conhecimento especializado:
-- `.delta-11/conhecimento/debugging-preventivo-patterns.md` — Metodologia de diagnostico, armadilhas Next.js e Supabase, scan preventivo
 
 ## PROTOCOLO DE FINALIZAÇÃO
 

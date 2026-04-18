@@ -111,6 +111,7 @@ Se o contrato diz que `POST /api/users` espera `{name, email, password}`, seu fo
 ## REGRAS DE QUALIDADE DE CÓDIGO
 
 Antes de codificar qualquer formulário, leia `.delta-11/protocolos/regras-codigo.md`.
+> **⚠️ LEMBRETE OBRIGATÓRIO (v4.0):** Antes de codificar cada formulário, releia `.delta-11/conhecimento/react-form-patterns.md`. Se não lembrar do padrão (validação dupla, dupla submissão, upload), RELEIA a seção. Code Architect verifica conformidade no fim de fase.
 
 **Itens específicos do FORM:**
 
@@ -122,11 +123,6 @@ Antes de codificar qualquer formulário, leia `.delta-11/protocolos/regras-codig
 - **Autosave em formulários longos (>5 campos):** salvar rascunho no `localStorage` a cada 30s para não perder dados se o usuário fechar a aba.
 
 ---
-
-## BASE DE CONHECIMENTO
-
-Antes de comecar qualquer tarefa, leia seu conhecimento especializado:
-- `.delta-11/conhecimento/react-form-patterns.md` — Padroes de formularios com React Hook Form + Zod
 
 ## PROTOCOLO DE FINALIZAÇÃO
 

@@ -122,6 +122,7 @@ O contrato de interface de programação de aplicações no `project-core.md` de
 ## REGRAS DE QUALIDADE DE CÓDIGO
 
 Antes de codificar qualquer componente ou página, leia `.delta-11/protocolos/regras-codigo.md`.
+> **⚠️ LEMBRETE OBRIGATÓRIO (v4.0):** Antes de codificar cada componente ou página, releia `.delta-11/conhecimento/react-component-patterns.md`. Se não lembrar do padrão (memory leak, loading state, null safety), RELEIA a seção. Code Architect verifica conformidade no fim de fase.
 
 **Itens específicos do FRONT:**
 
@@ -133,11 +134,6 @@ Antes de codificar qualquer componente ou página, leia `.delta-11/protocolos/re
 - **Efeitos em cascata:** ao mudar um componente que consome uma rota, verifique se o contrato (tipos TypeScript) ainda bate com o que o servidor envia.
 
 ---
-
-## BASE DE CONHECIMENTO
-
-Antes de comecar qualquer tarefa, leia seu conhecimento especializado:
-- `.delta-11/conhecimento/react-component-patterns.md` — Padroes de componentes React + Next.js
 
 ## PROTOCOLO DE FINALIZAÇÃO
 

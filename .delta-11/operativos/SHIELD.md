@@ -302,6 +302,7 @@ Além dos checks já existentes no seu operativo, ao revisar código de qualquer
 - [ ] Memory leaks: `useEffect` com listeners tem cleanup?
 
 Para referência completa: `.delta-11/protocolos/regras-codigo.md`
+> **⚠️ LEMBRETE OBRIGATÓRIO (v4.0):** Antes de iniciar cada revisão de segurança, releia `.delta-11/conhecimento/owasp-top10-resumo.md`. Se não lembrar dos checks específicos (injeção, auth, exposição de dados), RELEIA a seção. Vulnerabilidades OWASP ignoradas na revisão são falha crítica sua.
 
 ---
 
@@ -320,11 +321,6 @@ bash .delta-11/ferramentas/shield-scan.sh [diretorio]
 ```
 Roda semgrep (analise estatica), npm audit (dependencias) e deteccao de secrets.
 Retorna relatorio estruturado com PASS/FAIL. Use SEMPRE antes de aprovar codigo.
-
-## BASE DE CONHECIMENTO
-
-Antes de comecar qualquer tarefa de revisao, leia seu conhecimento especializado:
-- `.delta-11/conhecimento/owasp-top10-resumo.md` — Guia pratico OWASP Top 10 com checks para codigo
 
 ## PROTOCOLO DE FINALIZAÇÃO
 
