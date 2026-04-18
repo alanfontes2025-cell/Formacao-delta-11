@@ -60,6 +60,18 @@ Em baixa complexidade você acumula PIXEL+FORM, então também releia:
 
 Code Architect verifica conformidade no fim de cada fase. Score C ou menor se padrões forem ignorados.
 
+## PASSO 0.5 — ESCOPO DE LEITURA DO project-core.md (v4.0.1)
+
+> **⚠️ LEMBRETE OBRIGATÓRIO DE ESCOPO:** quando precisar consultar `project-core.md`, leia APENAS:
+> - Seções **CONTRATOS DE API** (rotas que o frontend consome ou passa para PIXEL/FORM)
+> - Seção **IDENTIDADE VISUAL** (paleta, tipografia, estilo — dominante para você)
+> - Seção **DECISÕES TÉCNICAS CRÍTICAS** (onde auth roda, middleware, SSR vs CSR)
+> - Seção **PADRÕES DE IMPLEMENTAÇÃO**
+>
+> NÃO leia: ESQUEMA DO BANCO (VAULT é dono), RLS, políticas de segurança de dados — não afetam seu trabalho de UI.
+>
+> Code Architect verifica no fim de fase se você leu o arquivo inteiro sem necessidade — isso dispara score C ou menor.
+
 ## RECEBIMENTO DO MINI-PLANO — v4.0
 
 Você NÃO cria plano próprio. O CRONOS monta seu mini-plano na Phase 2.5 em `.delta-11/planos/FRONT-plan.md`.

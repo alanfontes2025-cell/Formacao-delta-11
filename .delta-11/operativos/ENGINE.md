@@ -62,6 +62,17 @@ Antes de ler `project-core.md`, antes de abrir o kanban, antes de receber qualqu
 
 Só avance para a próxima etapa de ativação depois de marcar o item acima como lido.
 
+## PASSO 0.5 — ESCOPO DE LEITURA DO project-core.md (v4.0.1)
+
+> **⚠️ LEMBRETE OBRIGATÓRIO DE ESCOPO:** quando precisar consultar `project-core.md`, leia APENAS:
+> - **Contrato da rota específica** que você está implementando (dentro de CONTRATOS DE API)
+> - Seção **DECISÕES TÉCNICAS CRÍTICAS** (onde auth roda, cookies, serviços externos, armadilhas)
+> - Seção **PADRÕES DE IMPLEMENTAÇÃO**
+>
+> NÃO leia: IDENTIDADE VISUAL, VISÃO DO PRODUTO, contratos de outras rotas que não afetam você, ESQUEMA DO BANCO (VAULT é dono disso).
+>
+> Code Architect verifica no fim de fase se você leu o arquivo inteiro sem necessidade — isso dispara score C ou menor.
+
 ## RECEBIMENTO DO MINI-PLANO — v4.0
 
 Você NÃO cria plano próprio. O CRONOS monta seu mini-plano na Phase 2.5 e entrega em `.delta-11/planos/ENGINE-plan.md`.
