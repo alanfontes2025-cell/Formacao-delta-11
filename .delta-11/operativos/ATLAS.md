@@ -520,6 +520,62 @@ ENTRADA:
 
 7. Salve TUDO no arquivo `.delta-11/memoria/project-core.md`.
 
+### 7b. FATIAS DE DOMÍNIO (v4.0.1 — NOVO, OBRIGATÓRIO)
+
+Além do `project-core.md` principal (que contém a visão geral + índice + classificação), gere também FATIAS DE DOMÍNIO em `.delta-11/memoria/project-core/`. Cada fatia é um arquivo focado em um domínio específico, consumido pelos agentes cujo trabalho toca aquele domínio.
+
+**Estrutura:**
+
+```
+.delta-11/memoria/
+├── project-core.md                    ← visão, classificação, padrões gerais (TODOS leem)
+└── project-core/
+    ├── banco.md                        ← esquema, RLS, migrações, regras de negócio
+    ├── contratos.md                    ← todas as rotas de API com validações completas
+    ├── visual.md                       ← identidade visual, paleta, tipografia, estilo
+    └── decisoes-tecnicas.md            ← stack, armadilhas, padrões de implementação
+```
+
+**Quem lê cada fatia:**
+
+| Fatia | Agentes que leem |
+|---|---|
+| project-core.md (principal) | TODOS — é o índice |
+| banco.md | VAULT, BACK, SHIELD, SCOUT |
+| contratos.md | ENGINE, BACK, FRONT, PIXEL, FORM, SHIELD, SCOUT, CRONOS |
+| visual.md | FRONT, PIXEL, FORM, SHIELD |
+| decisoes-tecnicas.md | TODOS que codificam |
+
+ATLAS e SHIELD ainda têm acesso ao `project-core.md` principal E a todas as fatias — não há restrição para eles.
+
+**Como gerar:** após salvar o `project-core.md` principal, crie a pasta `project-core/` e salve cada fatia com o conteúdo correspondente. O `project-core.md` principal deve incluir no topo:
+
+```markdown
+## Fatias por domínio (v4.0.1)
+Para navegação focada, este contrato é acompanhado por 4 fatias:
+- `.delta-11/memoria/project-core/banco.md` — esquema + RLS + regras de negócio
+- `.delta-11/memoria/project-core/contratos.md` — rotas de API
+- `.delta-11/memoria/project-core/visual.md` — identidade visual
+- `.delta-11/memoria/project-core/decisoes-tecnicas.md` — armadilhas + padrões
+
+Os agentes consomem a fatia do seu domínio. Este documento principal fica como índice + visão geral + classificação.
+```
+
+**Retrocompatibilidade:** projetos existentes sem fatias continuam funcionando — os sub-agentes (contract-tester, impact-mapper, etc.) detectam a presença da pasta `project-core/` e usam as fatias SE existirem; caso contrário, caem no project-core.md monolítico.
+
+**CRONOS no mini-plano:** quando gerar mini-planos na Phase 2.5, referencie as fatias relevantes ao agente (não o project-core.md principal inteiro). Exemplo no mini-plano do VAULT:
+
+```markdown
+## Fontes de contexto para este agente
+- Mini-plano (este arquivo)
+- Pesquisa técnica: .delta-11/memoria/pesquisa-tecnica.md
+- Banco (fatia): .delta-11/memoria/project-core/banco.md
+- Decisões técnicas (fatia): .delta-11/memoria/project-core/decisoes-tecnicas.md
+- Base de conhecimento: .delta-11/conhecimento/supabase-rls-patterns.md
+```
+
+NÃO inclua o `project-core.md` principal no mini-plano dos agentes de execução — só o índice é pequeno, e o que importa é a fatia.
+
 8. Popule o `.delta-11/kanban.md` com TODAS as tarefas do projeto, organizadas por agente e por fase. Use o formato:
 
 ```markdown
