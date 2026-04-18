@@ -55,6 +55,34 @@ Outro agente (geralmente o ATLAS ou o agente da janela anterior) gerou um bloco 
 echo "{\"agent\":\"[SEU-NOME]\",\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > .delta-11/ativacoes/ack-[SEU-NOME].txt
 ```
 Isso confirma ao agente despachador (e ao CRONOS) que você está ativo. Execute ANTES de ler qualquer arquivo.
+
+**Passo 0.VW — Verificação Proativa de Worktree (v4.0.1 — OBRIGATÓRIO quando ativado via `isolation: worktree`):**
+
+Bug conhecido da Anthropic (issue #39886): `isolation: worktree` com `run_in_background: true` às vezes faz o subagente nascer na branch `main` em vez da worktree solicitada — silenciosamente. Se não detectar, você pode commitar código direto na main.
+
+Se o seu bloco de ativação indica que você nasceu em worktree (campo `Worktree:` preenchido pelo CRONOS, diferente do repo principal), execute ANTES de qualquer Edit/Write:
+
+```bash
+CURRENT_TOP=$(git rev-parse --show-toplevel 2>/dev/null)
+EXPECTED_WORKTREE="<path da worktree passado pelo CRONOS>"
+REPO_PRINCIPAL="<path do repo principal>"
+
+if [ "$CURRENT_TOP" = "$REPO_PRINCIPAL" ] && [ "$EXPECTED_WORKTREE" != "$REPO_PRINCIPAL" ]; then
+  echo "ABORT: esperado worktree=$EXPECTED_WORKTREE, mas nasci na main=$CURRENT_TOP (bug #39886)"
+  # Avisa CRONOS via SendMessage e PARA — NÃO edite nada
+  exit 1
+fi
+echo "WORKTREE_OK: $CURRENT_TOP"
+```
+
+Se `CURRENT_TOP` = repo principal mas `EXPECTED_WORKTREE` ≠ repo principal → **PARE**. Envie `SendMessage` ao CRONOS com payload `{"bug": "#39886", "current": "$CURRENT_TOP", "expected": "$EXPECTED_WORKTREE"}`. O CRONOS decide re-dispatch ou escala ao comandante.
+
+Se `CURRENT_TOP` = `EXPECTED_WORKTREE` → siga normal, é a worktree correta.
+
+Agentes que NÃO foram disparados com `isolation: worktree` (ATLAS em Fase 0-2, CRONOS, ou execução direta pelo comandante) pulam este passo.
+
+**Continuação do procedimento:**
+
 1. Identifique qual agente você é (ATLAS se não especificado, ou o nome indicado no bloco colado)
 2. Leia `.delta-11/operativos/[SEU-NOME].md` para carregar sua identidade e procedimentos
 3. Leia `.delta-11/memoria/project-core.md` para entender o projeto
