@@ -94,7 +94,8 @@ A partir da v4.0 Onda 2 da Formação Δ-11, **o AppleScript deixa de ser usado 
 CRONOS dispara agentes de execução usando o `Agent tool` nativo do Claude Code com:
 - `run_in_background: true` — paralelismo real (até 3 agentes simultâneos)
 - `isolation: worktree` — cada agente nasce em uma branch Git isolada
-- `SendMessage` e `TaskOutput` para comunicação peer-to-peer e recolhimento de resultados
+- `SendMessage` para comunicação peer-to-peer entre agentes ativos (CRONOS ↔ operativos)
+- **Notificações push** (`<task-notification>` automática quando subagente termina) para recolhimento de resultados — v4.0.1 migrou do padrão pull `TaskOutput` (DEPRECATED) para push-based
 
 Funciona igual em macOS, Linux e Windows, em Claude Code no terminal ou na extensão VS Code.
 
@@ -511,7 +512,7 @@ Agent(
 
 - `run_in_background: true` — agente roda em paralelo sem bloquear quem disparou. Máximo 3 simultâneos (regra de gestão de contexto).
 - `isolation: "worktree"` — cria worktree Git isolada para o agente. Código fica isolado; kanban/project-core/estado ficam no repo principal.
-- `name` — identificador único (permite `SendMessage` direcionado e `TaskOutput` pra checar progresso).
+- `name` — identificador único (usado em `SendMessage({to: "<name>"})` para enviar mensagem direcionada). Para `TaskOutput` raro/debug, usar `task_id` = `agentId` do retorno do Agent tool (não o `name`). Padrão v4.0.1: preferir notificações push em vez de polling.
 
 ### ESTRUTURA OBRIGATÓRIA DO PROMPT DE ATIVAÇÃO
 
@@ -573,7 +574,7 @@ Ao concluir todas as tarefas da onda:
 }
 ```
 
-**CRONOS checa status sem esperar:** `TaskOutput(name: "[nome-do-agente]")` retorna output atual.
+**CRONOS recebe resultado via push-based (v4.0.1):** quando subagente termina, CRONOS recebe `<task-notification>` automática com `task-id`, `status`, `result`. Reaja à notificação em vez de pollear. Se precisar checar progresso ativo (raro), use `TaskOutput(task_id: "<agentId>", block: false, timeout: 5000)` — parâmetro é `task_id` (agentId do retorno do Agent tool), NÃO `name`. A tool está marcada DEPRECATED pela Anthropic; preferir sempre push.
 
 **Fim da onda — merge:** CRONOS consolida todas as worktrees seguindo `.delta-11/protocolos/merge-guiado-contratos.md`, usando o contract-tester como árbitro objetivo em caso de conflito.
 

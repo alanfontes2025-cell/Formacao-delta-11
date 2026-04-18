@@ -468,7 +468,7 @@ Agent(
 
 - **`run_in_background: true`** — agente roda sem bloquear sua sessão. Você dispara múltiplos agentes em paralelo (até 3 simultâneos — REGRA 6 de gestão de contexto) e continua monitorando enquanto eles trabalham.
 - **`isolation: "worktree"`** — cria uma worktree Git isolada para o agente. Ele trabalha em branch própria; só você (CRONOS), no repo principal, faz o merge no final da onda.
-- **`name`** — identificador único do agente (permite você usar `SendMessage` direcionado e checar `TaskOutput`).
+- **`name`** — identificador único do agente para `SendMessage` direcionado (use este nome como `to`). Para `TaskOutput` (raro — preferir push-based), use o `agentId` que o Agent tool retorna, NÃO o name (v4.0.1).
 
 **Conteúdo obrigatório do `prompt` para cada agente de execução:**
 
@@ -523,9 +523,21 @@ Agentes terminam enviando `SendMessage` para você. Monitore sua caixa de mensag
 }
 ```
 
-**Checando status de agente sem esperar SendMessage:**
+**Checando status de agente (padrão push-based — v4.0.1):**
 
-Se precisar verificar o progresso de um agente antes dele terminar, use `TaskOutput(name: "engine-onda-2")`. Retorna o output atual do subagente.
+Você NÃO precisa pollear status. O Claude Code envia **notificação automática** (`<task-notification>`) quando um subagente termina — com `task-id`, `status`, `result` e `output-file`. Reaja a essas notificações em vez de checar ativamente.
+
+Se realmente precisar ver progresso antes do término (caso raro), use `TaskOutput(task_id: "<agentId>", block: false, timeout: 5000)`:
+- **Parâmetro correto é `task_id`** (o `agentId` retornado pelo Agent tool), NÃO `name`
+- `block: false` = não bloqueia esperando conclusão
+- A tool é marcada como **DEPRECATED** pela Anthropic — preferir notificações push
+- **NUNCA** use `Read` no `.output` file de local_agent — é o transcript JSONL completo do subagente, estoura sua janela de contexto
+
+**Resumo do fluxo correto:**
+1. Dispara agente via `Agent` tool (pega `agentId` do retorno)
+2. Aguarda `<task-notification>` chegar (automático)
+3. Reage ao `result` que vem na notificação
+4. Só usa `TaskOutput` se houver razão específica (debug ativo, progresso muito longo)
 
 **Fim da onda — merge:**
 
