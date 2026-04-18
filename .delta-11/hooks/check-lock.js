@@ -49,8 +49,16 @@ async function main() {
     process.exit(0);
   }
 
-  // Lock existe — verificar se é de outro agente
-  const lockContent = fs.readFileSync(lockPath, 'utf-8');
+  // v4.0.1: locks podem ser DIRETÓRIOS (novo formato via mkdir atômico)
+  // ou ARQUIVOS (formato legado). Ler metadados do lugar certo.
+  let lockContent;
+  const lockStats = fs.statSync(lockPath);
+  if (lockStats.isDirectory()) {
+    const metaPath = path.join(lockPath, 'meta');
+    lockContent = fs.existsSync(metaPath) ? fs.readFileSync(metaPath, 'utf-8') : '';
+  } else {
+    lockContent = fs.readFileSync(lockPath, 'utf-8');
+  }
 
   // Extrair agente do lock
   const agentMatch = lockContent.match(/^AGENTE:\s*(.+)$/m);

@@ -207,22 +207,41 @@ ANTES de começar qualquer tarefa, execute SEMPRE estes passos:
 - Identifique se algum agente está trabalhando em paralelo em arquivos relacionados
 
 **Passo 0.2 — Verifique locks ativos** (`.delta-11/locks/`):
-- Liste os arquivos `.lock` na pasta
-- Se algum arquivo que você precisa editar está travado por outro agente, NÃO edite — trabalhe em outra tarefa ou aguarde
+- Liste os lock directories existentes na pasta (`ls .delta-11/locks/`)
+- Se algum arquivo que você precisa editar já tem lock diretório correspondente, NÃO edite — trabalhe em outra tarefa ou aguarde
+- Locks são PASTAS (não arquivos) porque `mkdir` é atômico no POSIX; isso elimina race conditions entre agentes que tentam criar o mesmo lock simultaneamente
 
-**Passo 0.3 — Declare intenção (crie locks)**:
-- Para CADA arquivo que você vai criar ou editar nesta tarefa, crie um arquivo de lock:
-  - Caminho: `.delta-11/locks/[caminho--do--arquivo].lock` (substitua `/` por `--`)
-  - Exemplo: para `src/components/Card.tsx` → `.delta-11/locks/src--components--Card.tsx.lock`
-- Conteúdo do lock:
-```
+**Passo 0.3 — Declare intenção (crie locks ATÔMICOS via mkdir)** — v4.0.1+:
+
+Para CADA arquivo que você vai criar ou editar nesta tarefa, crie um lock atômico seguindo este padrão:
+
+```bash
+# Substitua `/` por `--` no nome do arquivo alvo
+LOCK_DIR=".delta-11/locks/[caminho--do--arquivo].lock"
+
+if mkdir "$LOCK_DIR" 2>/dev/null; then
+  # Você ganhou a trava — escreva metadados dentro
+  cat > "$LOCK_DIR/meta" << EOF
 AGENTE: [SEU-NOME]
 TAREFA: [T-XXX]
 SESSION: [session_id se disponível]
-INICIOU: [data/hora]
-FAZENDO: [descrição curta do que vai fazer]
-ARQUIVOS: [lista dos arquivos que vai tocar]
+INICIOU: [data/hora ISO-8601]
+FAZENDO: [descrição curta]
+ARQUIVOS: [lista de arquivos]
+EOF
+  echo "LOCK_OK"
+else
+  # Outro agente já tem a trava — NÃO edite este arquivo
+  echo "LOCK_CONFLICT: outro agente está editando"
+  # Trabalhe em outra tarefa ou aguarde liberação
+fi
 ```
+
+**Exemplo:** para `src/components/Card.tsx` → `mkdir .delta-11/locks/src--components--Card.tsx.lock`
+
+**POR QUE mkdir e NÃO Write:** `mkdir` é uma syscall atômica no POSIX — ou cria a pasta, ou falha porque já existe, sem janela de race. Usar `Write` para criar arquivo `.lock` é check-then-create (não-atômico): dois agentes podem verificar simultaneamente que o arquivo não existe, e ambos criam — quebra silenciosa.
+
+**Liberação do lock** (ao final da tarefa): `rm -rf "$LOCK_DIR"`
 
 **Passo 0.4 — Só então comece a trabalhar.**
 
@@ -315,16 +334,18 @@ Se você é um agente que escreve ou modifica código (ENGINE, BACK, FRONT, PIXE
 
 Agentes que NÃO escrevem código (ATLAS, CRONOS) e o próprio SHIELD não precisam deste passo.
 
-**Passo 3.9 — Libere os locks dos arquivos que você travou (obrigatório para TODOS os agentes)**
+**Passo 3.9 — Libere os locks que você travou (obrigatório para TODOS os agentes) — v4.0.1**
 
-Ao finalizar a tarefa (ou ao trocar para outra tarefa), delete TODOS os arquivos `.lock` que você criou no Passo 0.3:
+Ao finalizar a tarefa (ou ao trocar para outra tarefa), delete TODAS as pastas de lock (`.lock/`) que você criou no Passo 0.3:
 
 ```bash
 # Exemplo: se você travou src--components--Card.tsx.lock
-rm .delta-11/locks/src--components--Card.tsx.lock
+rm -rf .delta-11/locks/src--components--Card.tsx.lock
 ```
 
-Se você esquecer, o hook `Stop` vai liberar automaticamente quando sua sessão encerrar. Mas NÃO dependa disso — libere manualmente para que outros agentes possam trabalhar nos mesmos arquivos o mais rápido possível.
+**IMPORTANTE:** a partir da v4.0.1, locks são DIRETÓRIOS (não arquivos) porque `mkdir` é atômico. Para liberar, use `rm -rf` (não apenas `rm`), caso contrário a operação falha em diretório não-vazio (metadados ficam presos).
+
+Se você esquecer, o hook `Stop` vai liberar automaticamente quando sua sessão encerrar (hook usa `rm -rf`). Mas NÃO dependa disso — libere manualmente para que outros agentes possam trabalhar nos mesmos arquivos o mais rápido possível.
 
 **TODOS os agentes devem executar este passo, inclusive ATLAS e CRONOS.**
 
