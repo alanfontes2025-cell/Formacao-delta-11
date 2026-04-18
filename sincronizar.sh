@@ -222,8 +222,9 @@ for f in "$SOURCE/.delta-11/sprites/"*.png; do
     [ -f "$f" ] && SYNC_FILES+=(".delta-11/sprites/$(basename "$f")")
 done
 
-# Hooks (scripts de rastreamento em tempo real — .js e .sh)
-for f in "$SOURCE/.delta-11/hooks/"*.js "$SOURCE/.delta-11/hooks/"*.sh; do
+# Hooks (scripts de rastreamento em tempo real e cross-platform — .js, .sh, .py)
+# v4.0: hooks .py sao obrigatorios (cross-platform — macOS, Linux, Windows)
+for f in "$SOURCE/.delta-11/hooks/"*.js "$SOURCE/.delta-11/hooks/"*.sh "$SOURCE/.delta-11/hooks/"*.py; do
     [ -f "$f" ] && SYNC_FILES+=(".delta-11/hooks/$(basename "$f")")
 done
 
