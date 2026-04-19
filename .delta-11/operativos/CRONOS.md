@@ -373,6 +373,40 @@ Com o caminho crítico identificado, crie `.delta-11/planos/CRONOS-sequenciament
 [lista de agentes e suas folgas]
 ```
 
+### FORMATO OBRIGATÓRIO DO MINI-PLANO POR AGENTE (v4.0.3 — Mecanismo 1 da Criação)
+
+Cada `.delta-11/planos/[AGENTE]-plan.md` gerado por você DEVE conter 5 seções obrigatórias. As 4 primeiras já existiam implicitamente; a 5ª (LIMITES DE ESCOPO) é nova na v4.0.3 e é OBRIGATÓRIA.
+
+```markdown
+# Mini-plano — [AGENTE] Fase/Onda [N]
+
+## 1. O que esta tarefa precisa produzir
+[Descrição funcional do entregável esperado — o que DEVE existir ao final. Não como fazer, o QUE.]
+
+## 2. Recorte relevante da fase anterior
+[Apenas o que do [AGENTE-ANTERIOR]-produto.md afeta diretamente este agente. NÃO o arquivo inteiro.]
+
+## 3. Critérios de sucesso desta tarefa
+[Derivados dos critérios da fase; específicos a esta tarefa.]
+
+## 4. Dependências
+[O que outro agente precisa produzir antes que este possa concluir. O que este precisa entregar para outro.]
+
+## 5. LIMITES DE ESCOPO (v4.0.3 — OBRIGATÓRIO)
+
+**O que está EXPLICITAMENTE FORA do escopo desta tarefa:**
+- [item 1 — o que este agente NÃO deve fazer, mesmo que pareça útil]
+- [item 2 — decisão que não é deste agente]
+- [item 3 — preocupação de fase futura que não deve ser antecipada aqui]
+- [etc]
+
+**Por que isso importa:** um brief sem limites explícitos não é um brief — é autorização para o agente fazer qualquer coisa. Sem limite declarado, o SHIELD não consegue verificar contaminação de escopo objetivamente. Sem limite, o agente pode "ajudar" antecipando decisões de outras fases e quebrar a coesão.
+
+**Regra para o agente:** se você está prestes a fazer algo e essa coisa não está nos critérios de sucesso MAS poderia ser útil → VERIFIQUE se viola os LIMITES DE ESCOPO. Se violar, PARE e envie SendMessage ao CRONOS perguntando se deve ser movido para outra tarefa/agente.
+
+**Regra para o SHIELD/Code Architect:** output que viola LIMITES DE ESCOPO = REPROVAÇÃO IMEDIATA, independente de qualidade técnica.
+```
+
 **PASSO 5 — Atualizar o kanban com prioridades:**
 
 Para cada tarefa no `kanban.md` que está no caminho crítico, adicione a tag `[CRÍTICO]` na descrição:

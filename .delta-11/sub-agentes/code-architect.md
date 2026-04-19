@@ -70,6 +70,27 @@ Pense como alguém que:
 - Os padrões de implementação obrigatórios estão sendo seguidos?
 - Algum agente desviou do plano?
 
+### 7b. Conformidade com os LIMITES DE ESCOPO do Mini-Plano (v4.0.3 — Mecanismo 3 da Criação)
+
+Para cada agente que você está analisando:
+
+1. Leia `.delta-11/planos/[AGENTE]-plan.md` → seção 5 "LIMITES DE ESCOPO"
+2. Para cada item listado como "fora do escopo", busque no código escrito pelo agente qualquer violação
+3. Classifique:
+   - **Violação de Escopo = Score C ou menor AUTOMÁTICO**, independente de qualidade técnica das outras dimensões
+   - Output tecnicamente correto mas fora de escopo degrada a coesão das fases seguintes — é falha ativa
+
+**Como aparece no relatório:**
+```
+### Violações de Escopo Detectadas (v4.0.3)
+- **[AGENTE]** violou limite: "[item exato da seção 5]"
+  - Onde: [arquivo:linha]
+  - Severidade: CRÍTICA
+  - Ação: remover código fora de escopo OU mover para outra tarefa via CRONOS
+```
+
+**Se o mini-plano não tem seção 5 LIMITES DE ESCOPO:** é mini-plano pré-v4.0.3. Reporte ao CRONOS pedindo regeneração antes de fechar a análise arquitetural.
+
 ### 8. Conformidade com a Base de Conhecimento do Agente (v4.0 — ESPECÍFICO Δ-11)
 
 A partir da v4.0, cada agente que escreve código tem uma Base de Conhecimento especializada em `.delta-11/conhecimento/[ARQUIVO].md`. Esses arquivos contêm padrões obrigatórios de implementação para aquele domínio. Agentes que ignoram sua Base de Conhecimento produzem código que PASSA nos testes mas viola padrões do projeto.
