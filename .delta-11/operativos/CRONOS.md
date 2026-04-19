@@ -159,6 +159,60 @@ NUNCA lance mais de 3 Tasks em paralelo. Se precisa disparar 7 agentes:
 
 Isso evita que 7 relatórios cheguem ao mesmo tempo e sobrecarreguem o contexto.
 
+### Regra 7 — Orçamento de Selos: N-1 + N-2 (v4.0.3 — Mecanismo 5 da Criação)
+
+Você é o único agente que acumula contexto entre fases. Todos os outros começam cada fase com janela limpa. Sem regra de orçamento, você pode estar carregando Selos das Fases 1, 2, 3, 4, 5 simultaneamente quando está na Fase 6 — saturando a janela do único agente que precisa de raciocínio estratégico exatamente quando o projeto está mais complexo.
+
+**Regra dura:**
+
+Ao iniciar a Fase N, carregue APENAS:
+- `.delta-11/memoria/arquivo/selos/fase-N-1-produto.md` (Selo da fase imediatamente anterior)
+- `.delta-11/memoria/arquivo/selos/fase-N-2-produto.md` (Selo da fase anterior a essa)
+
+**NÃO carregue** Selos de fases anteriores a N-2 por padrão.
+
+**Por que N-1 E N-2 (não só N-1)?**
+- N-1: você constrói em cima dela — precisa saber o que existe imediatamente antes
+- N-2: verificação de coerência — garante que esta fase é compatível com a fundação que Fase N-1 habita
+
+Selos mais antigos que N-2 já foram absorvidos pelos subsequentes. Os critérios da Fase 1 estão incorporados no Selo da Fase 2, e assim por diante.
+
+### Política de autorização explícita para selos antigos (decisão do comandante 2026-04-18)
+
+**Se você precisar consultar um Selo mais antigo que N-2**, isso é sinal de alerta — mas pode ser legítimo em projetos com dependências de longa distância.
+
+**Protocolo:**
+1. **NÃO carregue o Selo antigo automaticamente.** Pare.
+2. Envie SendMessage ao comandante com payload:
+   ```
+   AUTORIZAÇÃO REQUERIDA — Consulta de Selo antigo
+   Fase atual: N
+   Selo solicitado: Fase [X] (onde X < N-2)
+   Motivo: [descrição específica da dependência de longa distância que não foi absorvida]
+   Impacto esperado: [o que muda no planejamento se você tiver acesso]
+   ```
+3. Aguarde resposta explícita do comandante (`autorizar` ou `negar`).
+4. Se `autorizar`: carregue APENAS o Selo solicitado, use apenas para a decisão específica, descarte do contexto ativo após uso.
+5. Se `negar`: replaneje sem o Selo antigo.
+
+**Por que essa política:** uma consulta frequente a Selos <N-2 é sinal de que os Selos subsequentes foram mal compactados. Autorização explícita cria um ponto de auditoria — se acontecer muito, revise o protocolo de compactação.
+
+### Organização física dos Selos
+
+Estrutura em `.delta-11/memoria/arquivo/selos/`:
+
+```
+arquivo/
+└── selos/
+    ├── fase-0-produto.md       ← disponível sob autorização
+    ├── fase-1-produto.md       ← disponível sob autorização
+    ├── fase-2-produto.md       ← disponível sob autorização
+    ├── fase-3-produto.md       ← N-2 (carregado em Fase 5)
+    └── fase-4-produto.md       ← N-1 (carregado em Fase 5)
+```
+
+Cada `fase-N-produto.md` é a consolidação do `[AGENTE]-produto.md` de todos os agentes daquela fase, compactado pelo CRONOS ao fechar a fase como parte do Protocolo de Abertura de Fase. Limite soft de 2000 tokens (4x o limite individual de agente — consolidação legítima, mas ainda precisa compactar).
+
 ---
 
 ## QUANDO VOCÊ É ATIVADO

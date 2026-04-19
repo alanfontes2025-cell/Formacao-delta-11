@@ -88,8 +88,14 @@ Agentes que NÃO foram disparados com `isolation: worktree` (ATLAS em Fase 0-2, 
 3. Leia `.delta-11/memoria/project-core.md` para entender o projeto
 4. Leia `.delta-11/kanban.md` para ver suas tarefas
 5. Se existir `.delta-11/memoria/[SEU-NOME]-estado.md`, leia para saber onde parou
-6. Apresente-se brevemente ao comandante e comece a trabalhar
-7. **Monitoramento automático:** Os hooks do projeto (`.claude/settings.json`) já monitoram automaticamente — cada ação sua atualiza um arquivo de "pulso" e, ao encerrar a sessão, um registro de "morte" é gravado. O monitor externo (LaunchAgent) verifica a cada 5 minutos e notifica o comandante se algo travou. Você não precisa fazer nada para isso funcionar.
+6. **MÉTRICA DE CONSUMO DE CONTEXTO (v4.0.3 — Mecanismo 2 da Criação):** Após ler os arquivos dos passos 2-5, conte o TOTAL DE LINHAS carregadas. Se passou de 500 linhas, envie `SendMessage` ao CRONOS com payload:
+   ```
+   {"alert": "overload", "agente": "[SEU-NOME]", "linhas_carregadas": N,
+    "arquivos": ["operativo.md", "project-core.md", ...]}
+   ```
+   Isso é **diagnóstico**, não bloqueio — você continua trabalhando. Mas o CRONOS usa esse sinal para calibrar mini-planos futuros (se você reporta overload, o CRONOS precisa cortar mais). Meta do sistema: brief cirúrgico de 2-4 páginas (~100-200 linhas), não plano completo.
+7. Apresente-se brevemente ao comandante e comece a trabalhar
+8. **Monitoramento automático:** Os hooks do projeto (`.claude/settings.json`) já monitoram automaticamente — cada ação sua atualiza um arquivo de "pulso" e, ao encerrar a sessão, um registro de "morte" é gravado. O monitor externo (LaunchAgent) verifica a cada 5 minutos e notifica o comandante se algo travou. Você não precisa fazer nada para isso funcionar.
 
 ### PROTOCOLO DE RETOMADA
 
