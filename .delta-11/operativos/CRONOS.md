@@ -685,14 +685,16 @@ No modelo da Criação, "E viu que era bom" significa: o criador viu A OBRA, nã
 
 ### Integração com outros protocolos
 
-Ordem da transição de fase (v4.0.1):
+Ordem da transição de fase (v4.0.3):
 1. Último agente da fase finaliza sua tarefa
 2. SHIELD verifica (testes de contrato, hash do project-core, cadeia de sub-agentes)
 3. **CRONOS dispara sub-agente `fresh-reviewer`** (Revisão Cruzada — P4 etapa 5) — relatório de experiência por olhos virgens
 4. Se Fresh Reviewer reporta problemas críticos: CRONOS cria tarefas de correção no kanban, volta à execução, repete 1-3
-5. **Protocolo do Viu que Era Bom** (CRONOS gera roteiro, comandante verifica com os próprios olhos e aprova)
-6. **Protocolo de Abertura de Fase** (CRONOS reolha o acumulado e ajusta próxima fase)
-7. CRONOS dispara primeira onda da próxima fase
+5. **CRONOS dispara sub-agente `cold-start-tester`** para cada `[AGENTE]-produto.md` da fase (M4b — Geometria da Criação) — valida se o produto é suficiente para handoff sem contexto adicional
+6. Se Cold Start Tester reprova algum produto: CRONOS devolve ao agente responsável para recompactar. Volta para 5 quando pronto.
+7. **Protocolo do Viu que Era Bom** (CRONOS gera roteiro, comandante verifica com os próprios olhos e aprova)
+8. **Protocolo de Abertura de Fase** (CRONOS reolha o acumulado e ajusta próxima fase)
+9. CRONOS dispara primeira onda da próxima fase
 
 ### Como disparar o Fresh Reviewer
 
@@ -707,7 +709,24 @@ Agent(
 
 Não passe `project-core.md` nem mini-planos no prompt — o valor do Fresh Reviewer é NÃO saber.
 
-Se o comandante rejeitar no passo 3 (algo estranho), CRONOS cria tarefas de correção no kanban e volta à execução — o selo não é concedido até a obra realmente sustentar.
+### Como disparar o Cold Start Tester (v4.0.3)
+
+Dispare UM Cold Start Tester POR cada `[AGENTE]-produto.md` da fase. Cada chamada recebe APENAS o path de UM arquivo. NÃO passe outros contextos.
+
+```
+Agent(
+  description: "Cold Start Test — [AGENTE] Fase [N]",
+  subagent_type: "general-purpose",
+  run_in_background: false,
+  prompt: "[conteúdo de .delta-11/sub-agentes/cold-start-tester.md] + 'Teste este arquivo: [PATH_ABSOLUTO]/.delta-11/memoria/[AGENTE]-produto.md'"
+)
+```
+
+**Critério de aprovação:** todos os produtos testados retornam `APROVAR FASE` com confiança ALTA nas 4 perguntas. Se qualquer produto reprovar, devolva ao agente responsável (via SendMessage) para recompactação antes de prosseguir.
+
+**Por que um por arquivo:** cada produto é auto-contido; o Cold Start Tester precisa ser virgem em relação a todos os outros. Se misturar produtos no mesmo teste, perde-se o isolamento que valida a suficiência individual.
+
+Se o comandante rejeitar no passo 7 (Viu que Era Bom — algo estranho), CRONOS cria tarefas de correção no kanban e volta à execução — o selo não é concedido até a obra realmente sustentar.
 
 ---
 

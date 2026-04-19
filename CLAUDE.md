@@ -280,12 +280,31 @@ fi
 
 Ao concluir qualquer tarefa, execute SEMPRE estes passos:
 
-**Passo 1 — Atualize seu arquivo de estado** (`.delta-11/memoria/[SEU-NOME]-estado.md`):
-- O que você acabou de fazer
-- Quais arquivos criou ou alterou
-- Decisões que tomou
-- Qual é a próxima tarefa pendente
-- Notas para o seu "eu do futuro" caso o contexto seja renovado
+**Passo 1 — Atualize seus dois arquivos de estado (v4.0.3 — PRODUTO vs HISTÓRIA)**
+
+A partir da v4.0.3, cada agente mantém DOIS arquivos separados. Isso materializa o M4 da Geometria da Criação (produto vs história, Gênesis 1:2 compacta estado inicial em 1 frase).
+
+**Passo 1a — Atualize `[SEU-NOME]-produto.md`** (`.delta-11/memoria/[SEU-NOME]-produto.md`) — **LIMITE RÍGIDO DE 500 TOKENS**:
+- O que EXISTE AGORA que não existia antes (3-5 frases funcionais, orientadas ao RESULTADO)
+- Como está estruturado (arquitetura + contratos mínimos para próxima fase construir em cima)
+- O que foi DECIDIDO NÃO FAZER nesta tarefa (lista explícita — evita suposição)
+- Descobertas que afetam fases futuras (apenas o que muda critérios/arquitetura adiante)
+- Próxima tarefa pendente (1 linha)
+- **NÃO ENTRA AQUI:** como você chegou lá, tentativas, deliberações, versões descartadas, logs, histórico
+- **> **⚠️ OBRIGATÓRIO v4.0.3:** Este arquivo tem LIMITE DURO DE 500 TOKENS. O hook `pre-selo.py` bloqueia a transição de fase se ultrapassar. Se não couber, você compactou mal — revise até caber.**
+
+**Passo 1b — Atualize `[SEU-NOME]-historia.md`** (`.delta-11/memoria/[SEU-NOME]-historia.md`) — **SEM LIMITE**:
+- Tentativas que não funcionaram e por quê
+- Decisões que considerou e descartou + raciocínio
+- Debates internos ou com outros agentes
+- Versões anteriores descartadas
+- Logs detalhados e métricas
+- Notas para seu "eu do futuro" no caso de retomada de contexto
+- **Propósito:** auditoria e retrospectiva interna. NÃO É LIDO pela próxima fase.
+
+**Por que separado:** a Anthropic já faz isso arquiteturalmente (subagents retornam só a mensagem final ao parent; transcripts vivem em arquivo JSONL separado). O D-11 espelha esse padrão. A próxima fase recebe produto para CONSTRUIR EM CIMA — não recebe história de COMO foi feito.
+
+**Retrocompatibilidade:** projetos antigos com `[SEU-NOME]-estado.md` continuam funcionando; na primeira atualização após a v4.0.3, divida em produto + historia. Se existir `[SEU-NOME]-estado.md`, prefira criar os 2 novos E manter o antigo por 1 fase (depois pode deletar).
 
 **Passo 2 — Atualize o kanban** (`.delta-11/kanban.md`):
 - Mova sua tarefa de "FAZENDO" para o destino correto:

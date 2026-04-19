@@ -186,7 +186,28 @@ Diferença chave:
 
 ---
 
-## QUANDO CADA SUB-AGENTE É OBRIGATÓRIO (v4.0.1)
+### 9. COLD START TESTER — Validação de Suficiência de Handoff (v4.0.3)
+
+**Arquivo:** `.delta-11/sub-agentes/cold-start-tester.md`
+
+**Quando disparar:** OBRIGATÓRIO ao final de cada fase, DEPOIS do Fresh Reviewer aprovar e ANTES do Protocolo do Viu que Era Bom. Uma chamada POR cada `[AGENTE]-produto.md` da fase.
+
+**Quem dispara:** CRONOS (único disparador)
+
+**O que faz:**
+- Recebe APENAS o path de UM `[AGENTE]-produto.md` — nada mais
+- NÃO lê project-core.md, mini-planos, história, kanban, outros produtos
+- Responde 4 perguntas sobre o que existe, o que pode construir em cima, o que NÃO existe, próxima tarefa
+- Classifica confiança (ALTA/BAIXA/IMPOSSÍVEL) em cada resposta
+- Sinaliza lacunas específicas se houver
+
+**Output:** Relatório com veredito APROVADO/REPROVADO + 4 respostas + lacunas detectadas
+
+**Regra de ouro:** materializa o Mecanismo 4b da Geometria da Criação (Teste do Cold Start). Gênesis 1:2 compacta estado inicial em UMA frase — se o produto aqui não é suficiente para fase nova entender, compactação foi mal feita. Último check antes do selo humano.
+
+---
+
+## QUANDO CADA SUB-AGENTE É OBRIGATÓRIO (v4.0.3)
 
 | Sub-agente | Frequência | Fase | Disparado por | Obrigatório? |
 |------------|-----------|------|---------------|--------------|
@@ -205,6 +226,7 @@ Diferença chave:
 | Schema Validator | Antes de aplicar migração | Fase 3+ | VAULT | ✅ SIM |
 | Verify App | Antes de deploy | Fase 6 | SHIELD + Hook UserPromptSubmit | ✅ SIM |
 | Fresh Reviewer (v4.0.1) | Final de cada fase, antes do selo humano | Todas as fases após build | CRONOS | ✅ SIM — Revisão Cruzada P4/5 |
+| Cold Start Tester (v4.0.3) | Final de cada fase, após Fresh Reviewer, antes do selo — 1 por agente | Todas as fases com produto | CRONOS | ✅ SIM — Mecanismo 4b da Criação |
 
 ---
 
