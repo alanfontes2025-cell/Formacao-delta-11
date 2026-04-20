@@ -381,6 +381,81 @@ Ao receber a descrição do projeto do comandante:
 
 Após aprovação da classificação:
 
+### ⚠️ REGRA DOS 7 CICLOS (v4.0.4 — OBRIGATÓRIA, SEM EXCEÇÃO)
+
+**Todo projeto DEVE ser decomposto em EXATAMENTE 7 ciclos de entrega. Não 3, não 4, não 6, não 10. Sete.**
+
+Esta regra materializa a Geometria da Criação aplicada ao roadmap macro — os 7 dias de Gênesis 1 refletidos na estrutura completa do projeto. Cada ciclo é uma rodada completa das 7 fases internas (0 → 6) aplicada a uma entrega específica.
+
+**Fractalidade da Criação no D-11:**
+
+```
+PROJETO inteiro
+└── 7 CICLOS de entrega (= os 7 dias macro)
+    └── cada ciclo atravessa 7 FASES (0, 1, 2, 3, 4, 5, 6)
+        └── cada fase contém 7 SUB-ETAPAS internas
+            (planejamento → delegação → execução → comunicação →
+             revisão cruzada → provação → selo)
+```
+
+O número 7 aparece em **3 níveis** — macro (ciclos), médio (fases), micro (sub-etapas). É a recorrência fractal fiel à Criação.
+
+### Como decidir os 7 ciclos (protocolo OBRIGATÓRIO)
+
+1. **Liste todas as entregas/features** que o projeto precisa ter em seu estado MADURO (não só MVP). Se o comandante disser "não existe MVP, quero tudo pronto" — use o escopo cheio. Se ele quer MVP, liste MVP + pós-MVP.
+
+2. **Mapeie dependências naturais** entre as entregas — o que precisa existir antes de quê.
+
+3. **Agrupe em 7 marcos naturais**, respeitando a progressão da Criação:
+   - **Ciclo 1 — Luz:** alma do produto + primeira versão funcional que prova o conceito
+   - **Ciclo 2 — Espaço:** estrutura que sustenta crescimento (onboarding, navegação, identidade visual consolidada)
+   - **Ciclo 3 — Sementes:** features núcleo que replicam valor (funcionalidade central do produto)
+   - **Ciclo 4 — Tempo:** ritmo e marcadores (notificações, cron jobs, recorrências, métricas temporais)
+   - **Ciclo 5 — Expansão:** preenchimento (features secundárias, integrações, casos-limite)
+   - **Ciclo 6 — Inteligência:** habitação madura (otimizações, insights, automação inteligente, análises)
+   - **Ciclo 7 — Celebração:** lançamento público / maturidade / escala (marketing, onboarding premium, documentação pública, maturidade operacional)
+
+4. **Se o escopo natural parece caber em menos de 7:** SUBDIVIDA. Cada ciclo ganha escopo menor, mais pontual. Um ciclo pequeno é uma entrega pequena — está tudo bem.
+
+5. **Se o escopo parece maior que 7:** CONSOLIDE entregas relacionadas em um mesmo ciclo, ou reserve features em sub-ciclos internos (Ciclo 3.1, 3.2, 3.3 dentro do Ciclo 3, se necessário). Mas o número de ciclos MACRO permanece 7.
+
+### Armadilha a evitar
+
+Não force divisão artificial. Se os 7 ciclos parecem 7 fatias arbitrárias sem lógica interna, volte e repense — provavelmente está agrupando entregas mal. O teste: cada ciclo deve poder ser explicado em 1 frase que responde *"o que este ciclo deixa pronto no sistema que não existia antes?"*. Se a frase soa artificial, o agrupamento está errado.
+
+### Ao reativar projeto existente (caso `mcp-server-produtos-2`)
+
+Se o projeto já foi planejado com outro número de ciclos (4, 5, 6, etc.) em versões anteriores do D-11 (pre-v4.0.4):
+
+- **Ciclos já entregues em produção CONTAM** no total dos 7. Não renomeie nem refaça.
+- **Ciclos planejados** (ainda não executados ou em execução) se REDIVIDEM para somar 7 no total.
+- Exemplo: projeto com Ciclos 1 e 2 em produção + Ciclo 3 em execução + Ciclo 4 planejado. Reestrutura: mantém 1, 2, 3 como estão; divide Ciclo 4 em Ciclos 4, 5, 6, 7 (4 novos ciclos menores).
+
+### Formato obrigatório do roadmap no `project-core.md`
+
+Ao documentar os 7 ciclos, use esta estrutura:
+
+```markdown
+## ROADMAP — 7 CICLOS DO PROJETO
+
+### Ciclo 1 — [Nome curto: ex. "Fundação Funcional"] — Dia 1 da Criação (Luz)
+**Visão em 1 frase:** [o que este ciclo deixa pronto]
+**Entregas:** [lista]
+**Status:** [planejado / em execução / em produção]
+
+### Ciclo 2 — [Nome] — Dia 2 (Espaço)
+...
+
+### Ciclo 7 — [Nome] — Dia 7 (Celebração)
+...
+```
+
+**Cada ciclo mapeado ao dia da Criação correspondente** (Luz, Espaço, Sementes, Tempo, Expansão, Inteligência, Celebração).
+
+---
+
+### Conteúdo da Fase 2 (após o roadmap dos 7 ciclos)
+
 1. Defina TODOS os contratos de interface de programação de aplicações. Para cada rota, use este formato exato:
 
 ```

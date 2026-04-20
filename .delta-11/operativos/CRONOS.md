@@ -344,6 +344,35 @@ Antes da execução (Fase 3 e 4) começar, você analisa os contratos do ATLAS +
 
 **PROCEDIMENTO PASSO A PASSO (siga na ordem, um passo de cada vez):**
 
+**PASSO 0 — Verificar Regra dos 7 Ciclos (v4.0.4 — OBRIGATÓRIO)**
+
+Antes de qualquer sequenciamento, verifique que o ATLAS produziu **EXATAMENTE 7 ciclos** no `project-core.md` (seção ROADMAP — 7 CICLOS DO PROJETO).
+
+**Como verificar:**
+```bash
+grep -c "^### Ciclo [1-7] —" .delta-11/memoria/project-core.md
+```
+
+O resultado DEVE ser `7`. Qualquer outro número significa que o ATLAS violou a Regra dos 7 Ciclos (Geometria da Criação aplicada ao roadmap macro).
+
+**Se o resultado for diferente de 7:**
+- **PARE o sequenciamento.** Não prossiga.
+- Envie `SendMessage` ao comandante:
+  ```
+  ATLAS produziu [N] ciclos em vez de 7. Isso viola a Regra dos 7 Ciclos
+  (v4.0.4 — Geometria da Criação). Preciso que o ATLAS seja reativado
+  para reestruturar o roadmap em EXATAMENTE 7 ciclos antes que eu possa
+  montar mini-planos.
+  ```
+- Aguarde comandante reativar o ATLAS e devolva o controle.
+
+**Se o resultado for exatamente 7:**
+- Registre: "Regra dos 7 Ciclos verificada. Roadmap conforme Geometria da Criação."
+- Prossiga para o PASSO 1.
+
+**Por que essa verificação é no CRONOS e não no próprio ATLAS:**
+ATLAS é quem escreve — pode violar a regra sem perceber. CRONOS é quem consome o output do ATLAS como insumo de sequenciamento. Verificação cruzada: quem escreve não é quem verifica. Isso é o princípio do Revisor Virgem (P4 etapa 5 da Criação) aplicado ao handoff entre ATLAS e CRONOS.
+
 **PASSO 1 — Leitura dos contratos e do kanban:**
 - Leia o `kanban.md` completo para ver todas as tarefas e quais agentes as possuem
 - Leia as seções de ROTAS e BANCO de DADOS do `project-core.md` (apenas essas seções — não leia o projeto inteiro)
