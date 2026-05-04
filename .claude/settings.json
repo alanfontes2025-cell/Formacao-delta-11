@@ -1,5 +1,27 @@
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .delta-11/hooks/check-lock.js",
+            "timeout": 3000
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .delta-11/hooks/validar-contratos-fim-fase.py || python .delta-11/hooks/validar-contratos-fim-fase.py",
+            "timeout": 300000
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "*",
@@ -20,28 +42,26 @@
             "timeout": 3000
           }
         ]
-      }
-    ],
-    "PreToolUse": [
+      },
       {
-        "matcher": "Write|Edit",
+        "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "node .delta-11/hooks/check-lock.js",
-            "timeout": 3000
+            "command": "python3 .delta-11/hooks/regenerar-contratos.py || python .delta-11/hooks/regenerar-contratos.py",
+            "timeout": 10000
           }
         ]
       }
     ],
-    "PreCompact": [
+    "UserPromptSubmit": [
       {
-        "matcher": "*",
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "bash .delta-11/hooks/pre-compact.sh",
-            "timeout": 3000
+            "command": "python3 .delta-11/hooks/validar-deploy.py || python .delta-11/hooks/validar-deploy.py",
+            "timeout": 600000
           }
         ]
       }
@@ -58,6 +78,18 @@
           {
             "type": "command",
             "command": "node .delta-11/hooks/release-locks.js",
+            "timeout": 3000
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .delta-11/hooks/pre-compact.sh",
             "timeout": 3000
           }
         ]

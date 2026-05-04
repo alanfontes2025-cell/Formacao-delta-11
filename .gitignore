@@ -38,6 +38,9 @@ credentials.json
 *.pem
 *.key
 
+# ─── Config MCP local (paths especificos da maquina) ──────────
+.mcp.json
+
 # ─── Memorias dos projetos consumidores (se aparecerem aqui) ─
 .memoria-do-dia.md
 .memoria-projeto.md

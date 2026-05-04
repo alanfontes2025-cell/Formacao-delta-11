@@ -20,6 +20,16 @@
             "timeout": 3000
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .delta-11/hooks/regenerar-contratos.py || python .delta-11/hooks/regenerar-contratos.py",
+            "timeout": 10000
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -30,6 +40,38 @@
             "type": "command",
             "command": "node .delta-11/hooks/check-lock.js",
             "timeout": 3000
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .delta-11/hooks/validar-contratos-fim-fase.py || python .delta-11/hooks/validar-contratos-fim-fase.py",
+            "timeout": 300000
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .delta-11/hooks/pre-selo.py || python .delta-11/hooks/pre-selo.py",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .delta-11/hooks/validar-deploy.py || python .delta-11/hooks/validar-deploy.py",
+            "timeout": 600000
           }
         ]
       }

@@ -56,13 +56,26 @@ async function main() {
   const dataStr = agora.toISOString().substring(0, 10);
 
   // Ler lock ativo para extrair tarefa (se existir)
+  // v4.0.1: suporta lock-diretório (novo) e lock-arquivo (legado)
   let tarefa = '—';
   const locksDir = path.join(cwd, '.delta-11', 'locks');
   if (fs.existsSync(locksDir)) {
     try {
-      const lockFiles = fs.readdirSync(locksDir).filter(f => f.endsWith('.lock'));
-      for (const lockFile of lockFiles) {
-        const lockContent = fs.readFileSync(path.join(locksDir, lockFile), 'utf-8');
+      const lockEntries = fs.readdirSync(locksDir).filter(f => f.endsWith('.lock'));
+      for (const lockEntry of lockEntries) {
+        const lockPath = path.join(locksDir, lockEntry);
+        let lockContent;
+        try {
+          const st = fs.statSync(lockPath);
+          if (st.isDirectory()) {
+            const metaPath = path.join(lockPath, 'meta');
+            lockContent = fs.existsSync(metaPath) ? fs.readFileSync(metaPath, 'utf-8') : '';
+          } else {
+            lockContent = fs.readFileSync(lockPath, 'utf-8');
+          }
+        } catch {
+          continue;
+        }
         const agentMatch = lockContent.match(/^AGENTE:\s*(.+)$/m);
         if (agentMatch && agentMatch[1].trim() === agente) {
           const tarefaMatch = lockContent.match(/^TAREFA:\s*(.+)$/m);
@@ -80,35 +93,70 @@ async function main() {
   // Caminho do activity-log
   const logPath = path.join(cwd, '.delta-11', 'activity-log.md');
 
-  // Criar arquivo se não existir
-  if (!fs.existsSync(logPath)) {
-    const header =
-      `# Activity Log — Delta-11\n\n` +
-      `> Gerado automaticamente por hooks. Não editar manualmente.\n\n`;
-    fs.writeFileSync(logPath, header, 'utf-8');
+  // v4.0.1: mutex atômico (mkdir) para proteger bloco
+  // "verificar cabeçalho do dia + append de linha".
+  // Sem isso, dois agentes podem ver o marcador ausente e ambos
+  // adicionarem o cabeçalho, causando duplicação.
+  const mutexPath = path.join(cwd, '.delta-11', 'locks', 'activity-log.mutex');
+
+  // Tentar adquirir mutex (retry com backoff — máximo 10 tentativas = ~1s)
+  let mutexAdquirido = false;
+  for (let tentativa = 0; tentativa < 10; tentativa++) {
+    try {
+      fs.mkdirSync(mutexPath);
+      mutexAdquirido = true;
+      break;
+    } catch (err) {
+      if (err.code === 'EEXIST') {
+        // Backoff de 100ms entre tentativas
+        const delay = Date.now() + 100;
+        while (Date.now() < delay) { /* busy wait curto */ }
+      } else {
+        break; // erro real, desistir
+      }
+    }
   }
 
-  // Verificar se precisa adicionar cabeçalho do dia
-  const conteudo = fs.readFileSync(logPath, 'utf-8');
-  const marcadorDia = `## ${dataStr}`;
+  try {
+    // Criar arquivo se não existir
+    if (!fs.existsSync(logPath)) {
+      const header =
+        `# Activity Log — Delta-11\n\n` +
+        `> Gerado automaticamente por hooks. Não editar manualmente.\n\n`;
+      fs.writeFileSync(logPath, header, 'utf-8');
+    }
 
-  let linhaParaAdicionar = '';
+    // Verificar se precisa adicionar cabeçalho do dia
+    const conteudo = fs.readFileSync(logPath, 'utf-8');
+    const marcadorDia = `## ${dataStr}`;
 
-  if (!conteudo.includes(marcadorDia)) {
-    linhaParaAdicionar +=
-      `\n${marcadorDia}\n\n` +
-      `| Hora  | Agente | Tarefa | Arquivo | Ação | Descrição |\n` +
-      `|-------|--------|--------|---------|------|-----------|\n`;
+    let linhaParaAdicionar = '';
+
+    if (!conteudo.includes(marcadorDia)) {
+      linhaParaAdicionar +=
+        `\n${marcadorDia}\n\n` +
+        `| Hora  | Agente | Tarefa | Arquivo | Ação | Descrição |\n` +
+        `|-------|--------|--------|---------|------|-----------|\n`;
+    }
+
+    // Escapar pipes no conteúdo da descrição
+    const descricaoSafe = descricao.replace(/\|/g, '\\|');
+    const arquivoSafe = arquivo.replace(/\|/g, '\\|');
+
+    linhaParaAdicionar += `| ${hora} | ${agente} | ${tarefa} | ${arquivoSafe} | ${toolName} | ${descricaoSafe} |\n`;
+
+    // Append atômico (O_APPEND garante atomicidade para writes pequenos no POSIX)
+    fs.appendFileSync(logPath, linhaParaAdicionar, 'utf-8');
+  } finally {
+    // Liberar mutex SEMPRE, mesmo em erro
+    if (mutexAdquirido) {
+      try {
+        fs.rmSync(mutexPath, { recursive: true, force: true });
+      } catch {
+        // Se falhar ao liberar, não bloqueia — release-locks vai pegar depois
+      }
+    }
   }
-
-  // Escapar pipes no conteúdo da descrição
-  const descricaoSafe = descricao.replace(/\|/g, '\\|');
-  const arquivoSafe = arquivo.replace(/\|/g, '\\|');
-
-  linhaParaAdicionar += `| ${hora} | ${agente} | ${tarefa} | ${arquivoSafe} | ${toolName} | ${descricaoSafe} |\n`;
-
-  // Append ao arquivo
-  fs.appendFileSync(logPath, linhaParaAdicionar, 'utf-8');
 
   process.exit(0);
 }
