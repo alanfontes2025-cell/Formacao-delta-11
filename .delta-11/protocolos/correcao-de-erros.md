@@ -35,7 +35,7 @@ Qualquer agente que encontrar um erro que NÃO consegue resolver sozinho pode au
 1. Tente resolver sozinho (máximo 3 tentativas)
 2. Classifique o erro (A/B/C)
 3. Crie arquivo em `.delta-11/ativacoes/erro-[DESTINO].txt` com contexto completo
-4. Auto-dispare usando o mecanismo AppleScript do VS Code
+4. Auto-dispare rodando `bash ./disparar.sh erro-[DESTINO]` via Bash tool (cross-platform: Windows/macOS/Linux)
 5. Continue trabalhando em outras tarefas enquanto o agente de diagnóstico resolve
 
 ## CATEGORIAS DE ALTERAÇÃO

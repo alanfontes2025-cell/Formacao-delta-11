@@ -6,7 +6,7 @@ Este documento é para VOCÊ, comandante. Aqui está tudo que você precisa para
 
 ## COMO TUDO FUNCIONA EM 30 SEGUNDOS
 
-1. Rode o script de instalação no Terminal do macOS (uma única vez)
+1. Rode o script de instalação no terminal (uma única vez) — Windows, macOS ou Linux
 2. Abra o VS Code com o projeto
 3. Abra UMA janela do Claude Code e digite `d11` seguido da descrição do projeto
 4. O sistema planeja tudo e te entrega os prompts prontos para cada janela que você precisa abrir
@@ -18,9 +18,43 @@ Este documento é para VOCÊ, comandante. Aqui está tudo que você precisa para
 
 ---
 
+## SISTEMAS SUPORTADOS
+
+A Formação Δ-11 funciona em 3 sistemas operacionais:
+
+| Sistema | Shell esperado | Notas |
+|---------|----------------|-------|
+| **Windows 10/11** | Git Bash (já vem com o Git for Windows) | Modo padrão. Usa Windows Terminal (`wt.exe`) e PowerShell SendKeys nos bastidores. |
+| **macOS** | Terminal.app, iTerm2, etc. | Usa AppleScript e `osascript` nos bastidores. |
+| **Linux** | bash | Usa `xdotool` para automação de janelas (instale com `sudo apt install xdotool`). |
+| **WSL** | bash dentro do WSL | Tratado como Windows para automação de janelas. |
+
+O `disparar.sh` detecta automaticamente qual sistema está sendo usado via `uname -s` e escolhe o método correto. Você não precisa configurar nada.
+
+---
+
 ## INSTALAÇÃO (uma vez só)
 
-Abra o Terminal do macOS e execute:
+### Pré-requisitos por sistema
+
+**Windows 10/11:**
+- [Git for Windows](https://git-scm.com/download/win) (traz o Git Bash usado para rodar os scripts)
+- [Visual Studio Code](https://code.visualstudio.com/) com a extensão **Claude Code**
+- GitHub CLI: abra o PowerShell e rode `winget install --id GitHub.cli`
+- jq: `winget install jqlang.jq`
+- (Opcional) Windows Terminal — já vem instalado no Win 11
+
+**macOS:**
+- Homebrew, depois `brew install gh jq`
+- Visual Studio Code com a extensão **Claude Code**
+
+**Linux:**
+- `sudo apt install gh jq xdotool` (Debian/Ubuntu) ou equivalente
+- Visual Studio Code com a extensão **Claude Code**
+
+### Comando de instalação
+
+Abra o terminal (Git Bash no Windows, Terminal no macOS, terminal padrão no Linux) e execute:
 
 ```bash
 cd /caminho/para/pasta/dos/arquivos
@@ -29,12 +63,12 @@ chmod +x instalar.sh
 ```
 
 O script faz tudo automaticamente:
-- Verifica se você tem Git e GitHub CLI instalados (e te diz como instalar se não tiver)
+- Verifica se você tem Git e GitHub CLI instalados (e te mostra o comando exato pro seu sistema operacional se não tiver)
 - Cria um repositório privado no seu GitHub
 - Faz o primeiro commit e push
-- Instala a extensão Live Server no VS Code (para o painel visual)
-- Abre o VS Code com o projeto
-- Abre o painel visual no navegador
+- Instala os hooks de monitoramento (`heartbeat`, `on-stop`, `pre-compact`)
+- No macOS: instala o LaunchAgent que verifica agentes mortos a cada 5 min
+- No Windows: imprime as instruções para você agendar o monitor no Task Scheduler (opcional — os hooks por si só já registram pulso e morte)
 
 **Para projetos futuros**, use o script `novo-projeto.sh`:
 
@@ -43,6 +77,8 @@ O script faz tudo automaticamente:
 ```
 
 Isso copia os arquivos da Formação Δ-11 para uma pasta nova, limpa e pronta para um projeto diferente.
+
+> **Atalho no Windows:** se preferir, dê duplo-clique em `delta11-novo-projeto.bat` (na raiz da Formação) — ele pede o caminho do projeto e roda o `novo-projeto.sh` por baixo.
 
 ---
 
@@ -76,19 +112,19 @@ PRÓXIMAS JANELAS — Copie e cole cada bloco em uma nova janela:
 
 Você abre as janelas, cola os blocos, e cada agente começa a trabalhar. Pronto.
 
-**OU, ainda mais fácil:** rode o script de disparo automático no Terminal:
+**OU, ainda mais fácil:** rode o script de disparo automático no terminal:
 
 ```bash
 ./disparar.sh
 ```
 
-O script detecta automaticamente como abrir novas janelas do Claude Code:
+O script detecta automaticamente o sistema operacional e como abrir novas janelas do Claude Code:
 
-| Modo | Quando acontece | O que faz |
-|------|----------------|-----------|
-| **terminal-app** | Você tem o `claude` CLI instalado (recomendado) | Abre uma aba no Terminal.app para cada agente com o Claude CLI rodando |
-| **vscode-tab** | Você só tem a extensão do VS Code | Abre uma aba do Claude Code no VS Code para cada agente |
-| **manual** | Nenhum dos dois detectado | Te mostra onde cada prompt está salvo para você colar |
+| Modo | Quando acontece | O que faz no Windows | O que faz no macOS | O que faz no Linux |
+|------|----------------|---------------------|--------------------|--------------------|
+| **terminal-app** | Você tem o `claude` CLI instalado (recomendado) | Abre aba no Windows Terminal (`wt.exe`) e cola via PowerShell SendKeys | Abre aba no Terminal.app via AppleScript | Abre aba no gnome-terminal/konsole/xterm e cola via xdotool |
+| **vscode-tab** | Você só tem a extensão do VS Code | Usa PowerShell SendKeys para Ctrl+Shift+P → "Claude Code: Open in New Tab" | Usa AppleScript com targeting por título de janela | Usa xdotool para enviar teclas |
+| **manual** | Nada detectado / fallback | Mostra onde cada prompt está salvo para você colar manualmente | (idem) | (idem) |
 
 O modo `terminal-app` é o recomendado porque cada agente roda como processo independente — sem risco de travamento por conflito de lock file.
 

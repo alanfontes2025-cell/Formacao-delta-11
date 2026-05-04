@@ -37,33 +37,41 @@ verificar() {
     fi
 }
 
+# Detectar SO para sugerir o instalador correto
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) PKG_HINT="winget install (ou npm install -g, ou pip install)" ;;
+    Darwin)               PKG_HINT="brew install (ou npm install -g, ou pip install)" ;;
+    Linux)                PKG_HINT="apt install / pacman -S (ou npm install -g, ou pip install)" ;;
+    *)                    PKG_HINT="instalador do seu sistema" ;;
+esac
+
 case "$AGENTE" in
     SHIELD)
         verificar "semgrep" "Analise estatica de seguranca (SAST)" "pip install semgrep"
-        verificar "npm" "Gerenciador de pacotes Node.js" "brew install node"
-        verificar "python3" "Python 3 (para parsear JSON)" "brew install python3"
+        verificar "npm" "Gerenciador de pacotes Node.js" "winget install OpenJS.NodeJS  |  brew install node  |  apt install nodejs"
+        verificar "python3" "Python 3 (para parsear JSON)" "winget install Python.Python.3.12  |  brew install python3  |  apt install python3"
         ;;
     VAULT)
         verificar "sqlfluff" "Linter de SQL" "pip install sqlfluff"
-        verificar "supabase" "CLI do Supabase" "brew install supabase/tap/supabase"
+        verificar "supabase" "CLI do Supabase" "npm install -g supabase  |  brew install supabase/tap/supabase"
         ;;
     ENGINE)
-        verificar "curl" "Testes de API" "(ja incluso no macOS)"
-        verificar "python3" "Parser de respostas JSON" "brew install python3"
+        verificar "curl" "Testes de API" "(ja incluso no Git Bash / macOS / Linux)"
+        verificar "python3" "Parser de respostas JSON" "winget install Python.Python.3.12  |  brew install python3  |  apt install python3"
         ;;
     SCOUT)
         verificar "lighthouse" "Auditoria de performance web" "npm install -g lighthouse"
-        verificar "python3" "Parser de relatorios" "brew install python3"
+        verificar "python3" "Parser de relatorios" "winget install Python.Python.3.12  |  brew install python3  |  apt install python3"
         ;;
     CRONOS)
-        verificar "bash" "Shell para scripts de monitoramento" "(ja incluso no macOS)"
-        verificar "grep" "Busca em arquivos de estado" "(ja incluso no macOS)"
-        verificar "stat" "Verificacao de idade de locks" "(ja incluso no macOS)"
+        verificar "bash" "Shell para scripts de monitoramento" "(ja incluso no Git Bash / macOS / Linux)"
+        verificar "grep" "Busca em arquivos de estado" "(ja incluso no Git Bash / macOS / Linux)"
+        verificar "stat" "Verificacao de idade de locks" "(ja incluso no Git Bash / macOS / Linux)"
         ;;
     BACK)
-        verificar "grep" "Busca de padroes em codigo" "(ja incluso no macOS)"
-        verificar "find" "Busca de arquivos de rotas" "(ja incluso no macOS)"
-        verificar "node" "Node.js para validacao de sintaxe" "brew install node"
+        verificar "grep" "Busca de padroes em codigo" "(ja incluso no Git Bash / macOS / Linux)"
+        verificar "find" "Busca de arquivos de rotas" "(ja incluso no Git Bash / macOS / Linux)"
+        verificar "node" "Node.js para validacao de sintaxe" "winget install OpenJS.NodeJS  |  brew install node  |  apt install nodejs"
         ;;
     *)
         echo "  $AGENTE nao tem ferramentas especializadas para verificar."

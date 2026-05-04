@@ -1,3 +1,17 @@
+## 📚 INSTRUÇÕES ANTERIORES DESTE PROJETO (LER TAMBÉM)
+
+Antes de o Δ-11 ser instalado, este projeto já tinha um comportamento-base próprio.
+Esses arquivos continuam valendo e devem ser lidos por qualquer agente que iniciar trabalho aqui:
+
+- `CLAUDE-PROJETO.md` — instruções originais do projeto (hierarquia DISCERNIR → CONHECER → ENTENDER → SABEDORIA → AGIR)
+- `ARQUITETURA-MENTAL.md` — base de processamento mental do projeto
+
+A regra é: o Δ-11 governa O FLUXO DE TRABALHO (kanban, agentes, fases, contratos).
+Os arquivos acima governam O MODO DE PENSAR antes de cada resposta.
+Os dois operam juntos, sem conflito.
+
+---
+
 ## ⚡ ATIVAÇÃO DELTA-11 — PRIORIDADE ABSOLUTA (LER ANTES DE TUDO)
 
 Se a mensagem do comandante contiver QUALQUER um destes termos:
@@ -392,48 +406,37 @@ Diga ao comandante: "Meu contexto estava chegando no limite. Já abri uma nova j
 
 Todo agente da Formação Δ-11 pode abrir uma nova instância do Claude Code e enviar um prompt automaticamente. Isso elimina a necessidade do comandante copiar e colar prompts manualmente.
 
+> **REGRA DE OURO (Windows + Git Bash):** Os agentes **NUNCA** executam código de janela diretamente (sem AppleScript, sem PowerShell SendKeys inline, sem `osascript`). Toda automação de janela é delegada ao script `./disparar.sh`, que detecta o sistema operacional (Windows, macOS, Linux, WSL) e usa o método correto para cada um. O agente apenas (1) gera o arquivo de ativação em `.delta-11/ativacoes/`, (2) chama `bash ./disparar.sh NOME-DO-AGENTE` via Bash tool, e (3) registra o dispatch no seu estado.
+
 ### DETECÇÃO DE MODO (executar UMA VEZ antes do primeiro auto-dispatch)
 
 O sistema suporta 3 modos de dispatch. O modo é detectado automaticamente e salvo em `.delta-11/.dispatch-mode`:
 
 | Modo | Quando | Como funciona |
 |------|--------|---------------|
-| **vscode-tab** | Extensão Claude Code no VS Code (padrão) | Abre nova aba no VS Code via "Open in New Tab" com targeting por título de janela |
-| **terminal-app** | CLI `claude` no Terminal (alternativa) | Abre aba no Terminal.app, roda `claude`, cola prompt |
+| **vscode-tab** | Extensão Claude Code no VS Code (padrão no Windows) | Abre nova aba no VS Code via Command Palette com PowerShell SendKeys |
+| **terminal-app** | CLI `claude` no Windows Terminal (alternativa) | Abre aba no `wt.exe`, roda `claude`, cola prompt via SendKeys |
 | **manual** | Nada detectado / fallback | Salva arquivo, pede ao comandante para colar |
 
-**DETECÇÃO AUTOMÁTICA:** `$VSCODE_PID` tem prioridade absoluta — é a realidade do ambiente atual e sobrescreve qualquer valor gravado em disco. Se `VSCODE_PID` existe, o Claude Code está rodando como extensão do VS Code → `vscode-tab` (e o arquivo é corrigido se estiver errado). A presença do CLI no PATH NÃO significa que o comandante está usando o terminal.
+**DETECÇÃO AUTOMÁTICA:** `$VSCODE_PID` tem prioridade absoluta — é a realidade do ambiente atual e sobrescreve qualquer valor gravado em disco. Se `VSCODE_PID` existe, o Claude Code está rodando como extensão do VS Code → `vscode-tab`. A presença do CLI `claude` no PATH NÃO significa que o comandante está usando o terminal.
 
-Antes do primeiro auto-dispatch da sessão, detecte o modo:
+Para detectar/re-detectar o modo, basta rodar:
 
 ```bash
-# $VSCODE_PID é realidade — tem prioridade sobre o arquivo em disco
-if [ -n "$VSCODE_PID" ]; then
-    # Rodando dentro do VS Code (extensão) → vscode-tab, corrige o arquivo se estava errado
-    DISPATCH_MODE="vscode-tab"
-    echo "vscode-tab" > .delta-11/.dispatch-mode
-elif [ -f .delta-11/.dispatch-mode ]; then
-    # $VSCODE_PID ausente — confiar no arquivo gravado manualmente
-    DISPATCH_MODE=$(cat .delta-11/.dispatch-mode | tr -d '[:space:]')
-elif command -v claude &>/dev/null; then
-    # CLI disponível e NÃO está no VS Code → terminal-app
-    DISPATCH_MODE="terminal-app"
-    echo "terminal-app" > .delta-11/.dispatch-mode
-else
-    DISPATCH_MODE="manual"
-    echo "manual" > .delta-11/.dispatch-mode
-fi
+./disparar.sh --detect
 ```
+
+Esse comando lê `$VSCODE_PID` e o estado do sistema, atualiza `.delta-11/.dispatch-mode` e mostra o resultado.
 
 ### CONFIGURAÇÃO MANUAL DO MODO
 
 O comandante pode forçar um modo específico a qualquer momento:
 
 ```bash
-echo "vscode-tab" > .delta-11/.dispatch-mode      # Extensão VS Code (padrão)
-echo "terminal-app" > .delta-11/.dispatch-mode   # CLI no Terminal.app (alternativa)
-echo "manual" > .delta-11/.dispatch-mode           # Sempre pedir ao comandante para colar
-rm .delta-11/.dispatch-mode                        # Resetar detecção automática
+echo "vscode-tab" > .delta-11/.dispatch-mode      # Extensão VS Code (padrão Windows)
+echo "terminal-app" > .delta-11/.dispatch-mode    # Windows Terminal com claude CLI
+echo "manual" > .delta-11/.dispatch-mode          # Pedir ao comandante para colar
+rm .delta-11/.dispatch-mode                       # Resetar detecção automática
 ```
 
 ### O MECANISMO
@@ -442,7 +445,7 @@ Para disparar UM agente:
 
 **PASSO 0 — AVISO VISUAL ANTI-COLISÃO (OBRIGATÓRIO ANTES de qualquer auto-dispatch):**
 
-ANTES de executar o AppleScript, o agente DEVE exibir o seguinte bloco ASCII art na conversa. Este aviso dá tempo ao comandante para parar de digitar/clicar e evita que o prompt caia na janela errada:
+ANTES de chamar `disparar.sh`, o agente DEVE exibir o seguinte bloco ASCII art na conversa. Este aviso dá tempo ao comandante para parar de digitar/clicar e evita que o prompt caia na janela errada:
 
 ```
 ╔═══════════════════════════════════════════════════════════════════════╗
@@ -472,170 +475,38 @@ ANTES de executar o AppleScript, o agente DEVE exibir o seguinte bloco ASCII art
 ╚═══════════════════════════════════════════════════════════════════════╝
 ```
 
-Substitua `[NOME-DO-AGENTE]` pelo nome real. Exiba este bloco e AGUARDE 5 SEGUNDOS (usando `sleep 5` no bash) antes de prosseguir com o AppleScript. Isso garante que o comandante veja o aviso e pare de interagir.
+Substitua `[NOME-DO-AGENTE]` pelo nome real. Exiba este bloco e AGUARDE 5 SEGUNDOS antes de prosseguir. Isso garante que o comandante veja o aviso e pare de interagir.
 
-**PASSO 1 — Copiar e disparar:**
+**PASSO 1 — Garantir que o arquivo de ativação existe:**
+
+O agente já deve ter criado o arquivo de ativação em `.delta-11/ativacoes/janela-X-NOMEAGENTE.txt` antes deste passo (faz parte do protocolo de fase concluída ou de erro). Confirme que ele existe:
 
 ```bash
-# 0. Ler perfil do agente (especializacao real)
-AGENT_NAME="[NOME-DO-AGENTE]"  # Substituir pelo nome real
-PERFIL=".delta-11/perfis/${AGENT_NAME}.json"
-CLAUDE_CMD="claude"
-AGENT_MODEL=""
-
-if [ -f "$PERFIL" ] && command -v jq &>/dev/null; then
-    AGENT_MODEL=$(jq -r '.model // empty' "$PERFIL")
-    MCP_CONFIG=$(jq -r '.mcp_config // empty' "$PERFIL")
-
-    [ -n "$AGENT_MODEL" ] && CLAUDE_CMD="$CLAUDE_CMD --model $AGENT_MODEL"
-    [ -n "$MCP_CONFIG" ] && [ -f "$MCP_CONFIG" ] && CLAUDE_CMD="$CLAUDE_CMD --mcp-config $MCP_CONFIG"
-fi
-
-# 1. Copiar o prompt do agente para o clipboard
-# Para vscode-tab: prefixar com /model se o agente tem modelo definido
-if [ -n "$AGENT_MODEL" ]; then
-    # Criar copia temporaria com /model prefixado
-    TEMP_PROMPT=$(mktemp)
-    echo "/model $AGENT_MODEL" > "$TEMP_PROMPT"
-    echo "" >> "$TEMP_PROMPT"
-    cat .delta-11/ativacoes/[ARQUIVO].txt >> "$TEMP_PROMPT"
-    cat "$TEMP_PROMPT" | pbcopy
-    rm -f "$TEMP_PROMPT"
-else
-    cat .delta-11/ativacoes/[ARQUIVO].txt | pbcopy
-fi
-
-# 2. Aguardar o comandante ler o aviso
-sleep 5
-
-# 3. Ler modo de dispatch ($VSCODE_PID tem prioridade sobre o arquivo)
-if [ -n "$VSCODE_PID" ]; then
-    DISPATCH_MODE="vscode-tab"
-    echo "vscode-tab" > .delta-11/.dispatch-mode  # corrige o arquivo se estava errado
-elif [ -f .delta-11/.dispatch-mode ]; then
-    DISPATCH_MODE=$(cat .delta-11/.dispatch-mode | tr -d '[:space:]')
-else
-    DISPATCH_MODE="terminal-app"
-fi
-
-# 4. Pegar caminho do projeto
-PROJECT_PATH=$(pwd)
-
-# 5. Disparar conforme o modo
-if [ "$DISPATCH_MODE" = "terminal-app" ]; then
-    # MODO TERMINAL-APP: Abre aba no Terminal.app com claude CLI
-    osascript << APPLESCRIPT
-tell application "Terminal"
-    activate
-    delay 0.5
-    tell application "System Events"
-        tell process "Terminal"
-            keystroke "t" using {command down}
-        end tell
-    end tell
-    delay 1
-    do script "cd '$PROJECT_PATH' && $CLAUDE_CMD" in front window
-    delay 6
-    tell application "System Events"
-        tell process "Terminal"
-            keystroke "v" using {command down}
-            delay 0.5
-            keystroke return
-        end tell
-    end tell
-end tell
-APPLESCRIPT
-
-elif [ "$DISPATCH_MODE" = "vscode-tab" ]; then
-    # MODO VSCODE-TAB: Abre nova aba do Claude Code no VS Code
-    # AVISO PARA COMANDANTE: Se VS Code estiver em Space diferente (Mission Control),
-    # o macOS pode mudar de Space ao ativar. Para evitar isso:
-    # System Preferences → Mission Control → desmarcar "When switching to an application,
-    # switch to a Space with open windows for the application"
-
-    # Extrair nome da pasta do projeto para localizar a janela correta
-    PROJECT_FOLDER=$(basename "$PROJECT_PATH")
-
-    # Detectar nome do processo VS Code (pode ser "Code" ou "Electron")
-    VSCODE_PROCESS=$(osascript -e 'tell application "System Events" to get name of every process' 2>/dev/null | tr ',' '\n' | grep -o 'Code' | head -1)
-    if [ -z "$VSCODE_PROCESS" ]; then
-        VSCODE_PROCESS="Electron"
-    fi
-
-    # Detectar nome do app VS Code
-    VSCODE_APP=$(ls ~/Desktop/ /Applications/ 2>/dev/null | grep -o "Visual Studio Code[^.]*" | head -1)
-    if [ -z "$VSCODE_APP" ]; then
-        VSCODE_APP="Visual Studio Code"
-    fi
-
-    # Verificar se a janela do projeto já está aberta no VS Code
-    JANELA_ABERTA=$(osascript -e "tell application \"System Events\" to tell process \"$VSCODE_PROCESS\" to get title of windows" 2>/dev/null | tr ',' '\n' | grep -c "$PROJECT_FOLDER" 2>/dev/null || echo "0")
-
-    if [ "$JANELA_ABERTA" -eq 0 ] 2>/dev/null; then
-        # Janela não encontrada — abrir o projeto primeiro
-        code "$PROJECT_PATH" 2>/dev/null || open -a "$VSCODE_APP" "$PROJECT_PATH"
-        sleep 3
-    fi
-
-    # AppleScript com targeting por título de janela (garante a janela certa)
-    osascript << APPLESCRIPT
-set projectFolder to "$PROJECT_FOLDER"
-set vsCodeProcess to "$VSCODE_PROCESS"
-set vsCodeApp to "$VSCODE_APP"
-
--- Localizar a janela correta pelo título (evita abrir em outro projeto)
-tell application "System Events"
-    tell process vsCodeProcess
-        set targetWindow to missing value
-        repeat with w in windows
-            try
-                if title of w contains projectFolder then
-                    set targetWindow to w
-                    exit repeat
-                end if
-            end try
-        end repeat
-
-        -- Elevar a janela certa ANTES do activate (reduz troca de Space)
-        if targetWindow is not missing value then
-            perform action "AXRaise" of targetWindow
-            delay 0.3
-        end if
-    end tell
-end tell
-
--- Ativar VS Code (já deve focar a janela elevada acima)
-tell application vsCodeApp
-    activate
-end tell
-delay 1.5
-
-tell application "System Events"
-    tell process vsCodeProcess
-        keystroke "p" using {command down, shift down}
-        delay 0.8
-        keystroke "Claude Code: Open in New Tab"
-        delay 1.2
-        keystroke return
-        delay 3.5
-        keystroke "v" using {command down}
-        delay 0.5
-        keystroke return
-    end tell
-end tell
-APPLESCRIPT
-
-else
-    # MODO MANUAL: Informar o comandante
-    echo ""
-    echo "AUTO-DISPATCH INDISPONIVEL."
-    echo "O prompt foi salvo em: .delta-11/ativacoes/[ARQUIVO].txt"
-    echo "Abra um terminal, cd para o projeto, rode 'claude', e cole o conteudo."
-    echo ""
-fi
+ls .delta-11/ativacoes/*NOMEAGENTE*.txt
 ```
 
-**PASSO 2 — Registrar dispatch no estado (para verificação posterior pelo CRONOS):**
+**PASSO 2 — Disparar via `disparar.sh` (delega ao script cross-platform):**
+
+```bash
+# Aguardar o comandante ler o aviso visual
+sleep 5
+
+# Disparar — disparar.sh detecta Windows automaticamente e usa
+# wt.exe (Windows Terminal) ou PowerShell SendKeys conforme o modo
+bash ./disparar.sh NOMEAGENTE
+```
+
+**O que `disparar.sh` faz por baixo dos panos no Windows:**
+- Lê `.delta-11/.dispatch-mode` (ou `$VSCODE_PID`)
+- Lê o perfil do agente em `.delta-11/perfis/NOMEAGENTE.json` (modelo, MCP, ferramentas)
+- Copia o prompt para o clipboard via `clip.exe` (Git Bash já tem)
+- Se modo for `vscode-tab`: usa PowerShell SendKeys para `Ctrl+Shift+P → "Claude Code: Open in New Tab" → Enter → Ctrl+V → Enter`
+- Se modo for `terminal-app`: abre nova aba no Windows Terminal (`wt.exe`) com `claude` CLI e cola o prompt
+- Se algo falhar: cai pro modo `manual` e mostra instruções pro comandante
+
+> Por que delegar e não embutir o código aqui? Porque (a) o `disparar.sh` é mantido em UM lugar só, (b) ele é testado no seu sistema operacional real (Windows 11 + Git Bash), e (c) se mudarmos a forma de dispatch, mudamos em um arquivo só em vez de em 11 manuais diferentes.
+
+**PASSO 3 — Registrar dispatch no estado (para verificação posterior pelo CRONOS):**
 ```bash
 DISPATCH_AGENT="[NOME-DO-AGENTE-DESPACHADO]"
 DISPATCH_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -763,102 +634,21 @@ Diagnostique e corrija o erro acima.
 - **Sempre aguarde 8 segundos entre disparos** de agentes diferentes
 - **Sempre salve o prompt como arquivo em `.delta-11/ativacoes/`** antes de disparar (para registro)
 
-### SEGURANÇA DO VSCODE-TAB: TARGETING POR TÍTULO DE JANELA
+### SEGURANÇA DO VSCODE-TAB NO WINDOWS
 
-O modo `vscode-tab` é SEGURO quando usa targeting por título de janela. O AppleScript DEVE:
+O modo `vscode-tab` no Windows usa **PowerShell SendKeys** para mandar atalhos para a janela do VS Code (Ctrl+Shift+P → "Claude Code: Open in New Tab" → Enter → Ctrl+V → Enter). Toda essa lógica está implementada dentro do `disparar.sh` na função `disparar_vscode_windows()` — agentes NÃO precisam reimplementar.
 
-1. Extrair o nome da pasta do projeto (`PROJECT_FOLDER`)
-2. Listar TODAS as janelas abertas do VS Code
-3. Encontrar a janela cujo título contém o nome do projeto
-4. Usar `AXRaise` para elevar aquela janela específica ANTES de ativar
-5. Só então enviar keystrokes (`Cmd+Shift+P → Claude Code: Open in New Tab → Cmd+V`)
-6. Se a janela do projeto NÃO está aberta, abrir com `code $PROJECT_PATH` primeiro
+**Cuidados específicos do Windows que `disparar.sh` já trata:**
+- Conversão de caminho Git Bash (`/c/Users/...`) para caminho Windows (`C:\Users\...`) via `pwd -W`
+- Uso de `clip.exe` para clipboard (não `pbcopy`, que é macOS)
+- Detecção de `Code.exe` via `tasklist.exe` (não `pgrep`, que é Unix)
+- Uso de `wt.exe` (Windows Terminal padrão no Win 11) para o modo `terminal-app`, com fallback para `cmd.exe` se não estiver instalado
 
-**REGRA: Cross-project com vscode-tab é PROIBIDO.** Se o working directory do agente ≠ projeto-alvo, usar `terminal-app` (cd garante contexto correto).
+**Limitações conhecidas no Windows + VS Code:**
+- O VS Code precisa estar **em foco** quando o `disparar.sh` rodar (PowerShell SendKeys envia teclas pra janela ativa). Se o foco estiver em outra app, o atalho cai no lugar errado. Por isso o aviso anti-colisão de 5 segundos é OBRIGATÓRIO.
+- Se você tem múltiplas janelas do VS Code abertas em projetos diferentes, garanta que a do projeto correto está em foco antes do dispatch (ou use `--mode=terminal-app` para isolamento total).
 
-**O AppleScript correto para vscode-tab (dentro do mesmo projeto):**
-
-**IMPORTANTE — Detecção do nome do processo VS Code:**
-O VS Code pode rodar como processos diferentes dependendo da instalação:
-- Instalação padrão: processo `"Code"`, app `"Visual Studio Code"`
-- Instalação customizada (ex: "Visual Studio Code 2.app"): processo `"Electron"`, app `"Visual Studio Code 2"`
-
-O script DEVE detectar o nome correto automaticamente antes de usar:
-
-```bash
-# Extrair nome da pasta do projeto para localizar a janela correta
-PROJECT_FOLDER=$(basename "$PROJECT_PATH")
-
-# Detectar nome do processo VS Code (pode ser "Code" ou "Electron")
-VSCODE_PROCESS=$(osascript -e 'tell application "System Events" to get name of every process' 2>/dev/null | tr ',' '\n' | grep -o 'Code' | head -1)
-if [ -z "$VSCODE_PROCESS" ]; then
-    # Se não encontrou "Code", verificar se é "Electron" com janelas de VS Code
-    VSCODE_PROCESS="Electron"
-fi
-
-# Detectar nome do app VS Code (pode ser "Visual Studio Code" ou "Visual Studio Code 2")
-VSCODE_APP=$(ls ~/Desktop/ /Applications/ 2>/dev/null | grep -o "Visual Studio Code[^.]*" | head -1)
-if [ -z "$VSCODE_APP" ]; then
-    VSCODE_APP="Visual Studio Code"
-fi
-
-# Verificar se a janela do projeto já está aberta no VS Code
-JANELA_ABERTA=$(osascript -e "tell application \"System Events\" to tell process \"$VSCODE_PROCESS\" to get title of windows" 2>/dev/null | tr ',' '\n' | grep -c "$PROJECT_FOLDER" 2>/dev/null || echo "0")
-
-if [ "$JANELA_ABERTA" -eq 0 ] 2>/dev/null; then
-    # Janela não encontrada — abrir o projeto primeiro
-    code "$PROJECT_PATH" 2>/dev/null || open -a "$VSCODE_APP" "$PROJECT_PATH"
-    sleep 3
-fi
-
-# AppleScript com targeting por título de janela (garante a janela certa)
-osascript << APPLESCRIPT
-set projectFolder to "$PROJECT_FOLDER"
-set vsCodeProcess to "$VSCODE_PROCESS"
-set vsCodeApp to "$VSCODE_APP"
-
--- Localizar a janela correta pelo título (evita abrir em outro projeto)
-tell application "System Events"
-    tell process vsCodeProcess
-        set targetWindow to missing value
-        repeat with w in windows
-            try
-                if title of w contains projectFolder then
-                    set targetWindow to w
-                    exit repeat
-                end if
-            end try
-        end repeat
-
-        -- Elevar a janela certa ANTES do activate (reduz troca de Space)
-        if targetWindow is not missing value then
-            perform action "AXRaise" of targetWindow
-            delay 0.3
-        end if
-    end tell
-end tell
-
--- Ativar VS Code (já deve focar a janela elevada acima)
-tell application vsCodeApp
-    activate
-end tell
-delay 1.5
-
-tell application "System Events"
-    tell process vsCodeProcess
-        keystroke "p" using {command down, shift down}
-        delay 0.8
-        keystroke "Claude Code: Open in New Tab"
-        delay 1.2
-        keystroke return
-        delay 3.5
-        keystroke "v" using {command down}
-        delay 0.5
-        keystroke return
-    end tell
-end tell
-APPLESCRIPT
-```
+**Cross-project com vscode-tab é arriscado** — se o working directory do agente ≠ projeto-alvo, prefira `--mode=terminal-app` (que faz `cd` explícito antes de rodar `claude`).
 
 ---
 
@@ -1060,3 +850,4 @@ Toda vez que um agente errar de forma recorrente, adicionar aqui para prevenir r
 - [2026-03-09] [D-11 AppleScript nome de processo hardcoded] → AppleScript usava `process "Code"` e `application "Visual Studio Code"` hardcoded. No Mac do comandante o app se chama "Visual Studio Code 2" (instalado no Desktop, não em /Applications) e o processo roda como "Electron", não "Code". Resultado: AppleScript falhava com erro `-1728`. → Correção: **Detecção dinâmica do nome do processo e do app.** Script detecta: (1) nome do processo via `osascript` — se "Code" não existe, usa "Electron"; (2) nome do app via `ls ~/Desktop/ /Applications/` — encontra "Visual Studio Code 2" ou "Visual Studio Code". Variáveis `$VSCODE_PROCESS` e `$VSCODE_APP` são passadas para o AppleScript via `set vsCodeProcess to` / `set vsCodeApp to`.
 - [2026-03-31] [D-11 Contract-First Protocol] → SHIELD comparava contratos e código manualmente na Fase 4, gerando ciclos ENGINE→SHIELD→ENGINE quando implementação desviava do contrato. Sem testes automáticos, erros só apareciam depois de muito trabalho pronto. → Adicionado: **Contract-First Protocol** com novo sub-agente `contract-tester` (`.delta-11/sub-agentes/contract-tester.md`). SHIELD executa Passo 2.7 ao final da Fase 2: converte contratos do `project-core.md` em arquivos de teste executáveis em `tests/contracts/`. Build Validator passa a incluir testes de contrato como BLOCKER se existirem e falharem. Critério de conclusão de tarefa na Fase 4 passa a incluir verificação automática de contrato antes da revisão manual do SHIELD.
 - [2026-03-31] [D-11 .dispatch-mode gravado errado na instalação] → Arquivo `.dispatch-mode` era gravado como `terminal-app` durante instalação quando o CLI `claude` estava no PATH. Quando o agente ativava mais tarde dentro do VS Code, verificava o arquivo primeiro — e usava `terminal-app` mesmo com `$VSCODE_PID` ativo. Resultado: agente pedia ao comandante para colar prompt manualmente em vez de fazer auto-dispatch. → Correção: **`$VSCODE_PID` passa a ter prioridade absoluta sobre o arquivo em disco.** Lógica nova: se `$VSCODE_PID` existe → sempre `vscode-tab` E sobrescreve o arquivo. Só usa o arquivo se `$VSCODE_PID` está ausente. Isso garante que um arquivo gravado errado na instalação seja corrigido automaticamente na primeira sessão dentro do VS Code.
+- [2026-05-01] [D-11 instalação local Windows] → CLAUDE.md e operativos continham ~470 linhas de AppleScript, `pbcopy` e `osascript` inline que falhavam silenciosamente no Windows + Git Bash. Comandante usa Windows 11. → Correção: **Toda automação de janela foi delegada ao `disparar.sh`** (que já é cross-platform e detecta Windows via `uname -s` → MINGW). CLAUDE.md, os 10 operativos e `correcao-de-erros.md` agora apenas chamam `bash ./disparar.sh NOMEAGENTE` em vez de embutir scripts macOS. `verificar-dependencias.sh` foi atualizado para sugerir `winget` / `pip` / `npm` em vez de `brew install`. `.claude/settings.json` foi criado para wirear os hooks (`heartbeat.sh`, `on-stop.sh`, `pre-compact.sh`) — antes os hooks existiam no disco mas não estavam ativados, então o monitoramento não funcionava.

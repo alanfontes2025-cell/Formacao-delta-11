@@ -875,9 +875,9 @@ fi
 # ═══════════════════════════════════════════════════════════════
 
 if [ -n "$FILTRO" ]; then
-    ARQUIVOS=($(ls "$ATIVACOES_DIR"/*"$FILTRO"*.txt 2>/dev/null || true))
+    ARQUIVOS=($(ls "$ATIVACOES_DIR"/*"$FILTRO"*.txt 2>/dev/null | grep -v -E '/(ack|pulso|morte)-' || true))
 else
-    ARQUIVOS=($(ls "$ATIVACOES_DIR"/*.txt 2>/dev/null || true))
+    ARQUIVOS=($(ls "$ATIVACOES_DIR"/*.txt 2>/dev/null | grep -v -E '/(ack|pulso|morte)-' || true))
 fi
 
 if [ ${#ARQUIVOS[@]} -eq 0 ]; then

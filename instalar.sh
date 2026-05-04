@@ -52,11 +52,10 @@ echo -e "  ${GREEN}✓${NC} Git encontrado: $(git --version)"
 if ! command -v gh &> /dev/null; then
     echo -e "${RED}✗ GitHub CLI (gh) não encontrado.${NC}"
     echo ""
-    echo "  Instale com Homebrew:"
-    echo "    brew install gh"
-    echo ""
-    echo "  Se você não tem o Homebrew, instale primeiro:"
-    echo "    /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+    echo "  Instale conforme seu sistema operacional:"
+    echo "    Windows: winget install --id GitHub.cli"
+    echo "    macOS:   brew install gh"
+    echo "    Linux:   apt install gh   (ou veja https://github.com/cli/cli)"
     echo ""
     echo "  Depois rode este script novamente."
     exit 1
@@ -284,7 +283,10 @@ REGEOF
     fi
 else
     echo -e "  ${YELLOW}⚠${NC} jq nao encontrado — registro no registry ignorado"
-    echo "    Instale jq (brew install jq) e rode sincronizar.sh depois"
+    echo "    Instale conforme seu SO e rode sincronizar.sh depois:"
+    echo "      Windows: winget install jqlang.jq"
+    echo "      macOS:   brew install jq"
+    echo "      Linux:   apt install jq"
 fi
 
 echo ""
@@ -312,28 +314,53 @@ for hook in .delta-11/hooks/*.sh; do
     [ -f "$hook" ] && chmod +x "$hook"
 done
 
-# 5.7c: Instalar LaunchAgent (monitor invisível que substitui vigilante.sh)
-PLIST_SRC="$(cd "$(dirname "$0")" && pwd)/com.delta11.monitor.plist"
-PLIST_DST="$HOME/Library/LaunchAgents/com.delta11.monitor.plist"
+# 5.7c: Instalar monitor de fundo (verifica agentes mortos a cada 5 min)
+# macOS usa LaunchAgent; Windows precisaria de Task Scheduler (não implementado ainda)
+case "$(uname -s)" in
+    Darwin)
+        # macOS: LaunchAgent
+        PLIST_SRC="$(cd "$(dirname "$0")" && pwd)/com.delta11.monitor.plist"
+        PLIST_DST="$HOME/Library/LaunchAgents/com.delta11.monitor.plist"
 
-if [ -f "$PLIST_SRC" ]; then
-    if [ -f "$PLIST_DST" ]; then
-        echo -e "  ${GREEN}✓${NC} Monitor LaunchAgent já instalado"
-    else
-        mkdir -p "$HOME/Library/LaunchAgents"
-        cp "$PLIST_SRC" "$PLIST_DST"
-        launchctl load "$PLIST_DST" 2>/dev/null
-        echo -e "  ${GREEN}✓${NC} Monitor instalado (verifica a cada 5 min, invisível)"
-    fi
-else
-    echo -e "  ${YELLOW}⚠${NC} LaunchAgent plist não encontrado — pulando"
-fi
+        if [ -f "$PLIST_SRC" ]; then
+            if [ -f "$PLIST_DST" ]; then
+                echo -e "  ${GREEN}✓${NC} Monitor LaunchAgent já instalado"
+            else
+                mkdir -p "$HOME/Library/LaunchAgents"
+                cp "$PLIST_SRC" "$PLIST_DST"
+                launchctl load "$PLIST_DST" 2>/dev/null
+                echo -e "  ${GREEN}✓${NC} Monitor instalado (verifica a cada 5 min, invisível)"
+            fi
+        else
+            echo -e "  ${YELLOW}⚠${NC} LaunchAgent plist não encontrado — pulando"
+        fi
+        ;;
+    MINGW*|MSYS*|CYGWIN*)
+        # Windows: monitor automatico ainda nao implementado
+        echo -e "  ${YELLOW}ⓘ${NC} Monitor de fundo nao instalado (Windows)"
+        echo -e "      Os hooks (heartbeat/on-stop/pre-compact) ja funcionam — eles registram"
+        echo -e "      pulso, morte e alerta de contexto direto nos arquivos do projeto."
+        echo -e "      Para ativar verificacao automatica, agende no Windows Task Scheduler:"
+        echo -e "        Programa: bash"
+        echo -e "        Argumentos: \"$(cd "$(dirname "$0")" && pwd)/monitor-delta11.sh\""
+        echo -e "        Frequencia: a cada 5 minutos"
+        ;;
+    Linux)
+        echo -e "  ${YELLOW}ⓘ${NC} Monitor de fundo nao instalado (Linux)"
+        echo -e "      Para ativar, configure um cron job:"
+        echo -e "        */5 * * * * bash $(cd "$(dirname "$0")" && pwd)/monitor-delta11.sh"
+        ;;
+esac
 
-# 5.7d: Parar vigilante.sh antigo se estiver rodando
-if pgrep -f "vigilante.sh" > /dev/null 2>&1; then
-    pkill -f "vigilante.sh" 2>/dev/null
-    echo -e "  ${GREEN}✓${NC} Vigilante antigo parado (substituído pelo monitor)"
-fi
+# 5.7d: Parar vigilante.sh antigo se estiver rodando (so macOS/Linux — pgrep nao existe nativo no Windows)
+case "$(uname -s)" in
+    Darwin|Linux)
+        if pgrep -f "vigilante.sh" > /dev/null 2>&1; then
+            pkill -f "vigilante.sh" 2>/dev/null
+            echo -e "  ${GREEN}✓${NC} Vigilante antigo parado (substituído pelo monitor)"
+        fi
+        ;;
+esac
 
 echo ""
 

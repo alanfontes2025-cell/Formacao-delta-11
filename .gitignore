@@ -1,33 +1,70 @@
-# macOS
+# ═══════════════════════════════════════════════════════════════
+# FORMACAO D-11 — .gitignore (cross-platform: Windows/macOS/Linux)
+# ═══════════════════════════════════════════════════════════════
+
+# ─── Lixo do sistema operacional ──────────────────────────────
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ─── Lixo de editores ─────────────────────────────────────────
 *.swp
 *.swo
 *~
-
-# VS Code
 .vscode/settings.json
+.idea/
+*.sublime-workspace
+*.sublime-project
 
-# Node
+# ─── Dependencias ─────────────────────────────────────────────
 node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
 
-# Claude Code (local config)
-.claude/
+# ─── Variaveis de ambiente / credenciais ─────────────────────
+.env
+.env.local
+.env.*.local
+credentials.json
+*.pem
+*.key
 
-# Memórias locais (dados do projeto, não do sistema)
+# ─── Memorias dos projetos consumidores (se aparecerem aqui) ─
 .memoria-do-dia.md
 .memoria-projeto.md
 .memoria-ultimas-tarefas.md
 
-# Delta-11 dados locais
-.delta-11/.last-update
-.delta-11/locks/*.lock
-.delta-11/ativacoes/
-.delta-11/memoria/*-estado.md
+# ─── Delta-11: dados runtime (especificos de cada execucao) ──
+# Estes sao dados que cada projeto/maquina gera localmente —
+# nao fazem parte do template versionado.
 .delta-11/.dispatch-mode
-.delta-11/activity-log.md
+.delta-11/.last-update
 .delta-11/.edit-log
+.delta-11/activity-log.md
+.delta-11/monitor-status.json
+.delta-11/ativacoes/*.txt
+.delta-11/ativacoes/*.json
+.delta-11/locks/*.lock
+.delta-11/memoria/*-estado.md
+.delta-11/logs/
 
-# Ambiente
-.env
-.env.local
-credentials.json
+# Mas mantemos as pastas (com .gitkeep) versionadas
+!.delta-11/ativacoes/.gitkeep
+!.delta-11/locks/.gitkeep
+!.delta-11/memoria/.gitkeep
+
+# ─── Pasta duplicada/lixo de operacoes antigas ───────────────
+.delta-11/.delta-11/
+
+# ─── Rascunhos e relatorios locais ───────────────────────────
+rascunhos/
+reports/aprendizados/.cache/

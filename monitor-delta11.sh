@@ -137,16 +137,57 @@ for projeto in "${PROJETOS[@]}"; do
 EOF
 done
 
-# ─── Enviar notificações (SEM roubar foco) ─────────────────
+# ─── Enviar notificacoes (SEM roubar foco) ─────────────────
+
+# Detectar SO para escolher metodo de notificacao
+case "$(uname -s)" in
+    Darwin)               OS_KIND="macos"   ;;
+    MINGW*|MSYS*|CYGWIN*) OS_KIND="windows" ;;
+    Linux)
+        if [ -n "$WSL_DISTRO_NAME" ] || grep -qi microsoft /proc/version 2>/dev/null; then
+            OS_KIND="wsl"
+        else
+            OS_KIND="linux"
+        fi
+        ;;
+    *)                    OS_KIND="desconhecido" ;;
+esac
+
+notificar_sistema() {
+    local titulo="$1"
+    local msg="$2"
+
+    case "$OS_KIND" in
+        macos)
+            osascript -e "display notification \"$msg\" with title \"$titulo\" sound name \"Sosumi\"" 2>/dev/null
+            ;;
+        windows|wsl)
+            powershell.exe -NoProfile -Command "
+                Add-Type -AssemblyName System.Windows.Forms
+                \$balloon = New-Object System.Windows.Forms.NotifyIcon
+                \$balloon.Icon = [System.Drawing.SystemIcons]::Warning
+                \$balloon.BalloonTipTitle = '$titulo'
+                \$balloon.BalloonTipText = '$msg'
+                \$balloon.Visible = \$true
+                \$balloon.ShowBalloonTip(10000)
+                Start-Sleep -Seconds 3
+                \$balloon.Dispose()
+            " 2>/dev/null
+            ;;
+        linux)
+            command -v notify-send &>/dev/null && notify-send "$titulo" "$msg" 2>/dev/null
+            ;;
+    esac
+}
 
 if [ -n "$MORTES" ]; then
     MSG=$(echo -e "$MORTES" | head -3)
-    osascript -e "display notification \"$MSG\" with title \"Δ-11: Agente Morreu\" sound name \"Sosumi\"" 2>/dev/null
+    notificar_sistema "D-11: Agente Morreu" "$MSG"
 fi
 
 if [ -n "$TRAVADOS" ]; then
     MSG=$(echo -e "$TRAVADOS" | head -3)
-    osascript -e "display notification \"$MSG\" with title \"Δ-11: Agente Travado\" sound name \"Purr\"" 2>/dev/null
+    notificar_sistema "D-11: Agente Travado" "$MSG"
 fi
 
 # ─── Log ───────────────────────────────────────────────────

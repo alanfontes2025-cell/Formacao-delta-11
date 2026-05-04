@@ -41,7 +41,10 @@
 #   ./sincronizar.sh --diff             # Mostra diff entre repo e projetos
 #   ./sincronizar.sh --nota "mensagem"  # Adiciona nota de atualizacao
 #
-# REQUER: jq (brew install jq)
+# REQUER: jq
+#   Windows: winget install jqlang.jq
+#   macOS:   brew install jq
+#   Linux:   apt install jq (ou pacman -S jq)
 #
 # ═══════════════════════════════════════════════════════════════
 
@@ -96,7 +99,10 @@ echo ""
 # ─── Verificar pre-requisitos ──────────────────────────────────
 
 if ! command -v jq &> /dev/null; then
-    echo -e "${RED}x jq nao encontrado. Instale com: brew install jq${NC}"
+    echo -e "${RED}x jq nao encontrado. Instale conforme seu SO:${NC}"
+    echo -e "    Windows: ${BOLD}winget install jqlang.jq${NC}"
+    echo -e "    macOS:   ${BOLD}brew install jq${NC}"
+    echo -e "    Linux:   ${BOLD}apt install jq${NC} (ou pacman -S jq)"
     exit 1
 fi
 
